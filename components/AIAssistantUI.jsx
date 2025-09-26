@@ -7,9 +7,10 @@ import Header from "./Header"
 import ChatPane from "./ChatPane"
 import GhostIconButton from "./GhostIconButton"
 import ThemeToggle from "./ThemeToggle"
-import { INITIAL_CONVERSATIONS, INITIAL_TEMPLATES, INITIAL_FOLDERS } from "./mockData"
+import { useAuth } from "../context/AuthContext"
 
 export default function AIAssistantUI() {
+  const { token } = useAuth();
   const [theme, setTheme] = useState(() => {
     const saved = typeof window !== "undefined" && localStorage.getItem("theme")
     if (saved) return saved
@@ -71,16 +72,39 @@ export default function AIAssistantUI() {
     } catch {}
   }, [sidebarCollapsed])
 
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
+  const [conversations, setConversations] = useState([])
   const [selectedId, setSelectedId] = useState(null)
-  const [templates, setTemplates] = useState(INITIAL_TEMPLATES)
-  const [folders, setFolders] = useState(INITIAL_FOLDERS)
+  const [templates, setTemplates] = useState([])
+  const [folders, setFolders] = useState([])
 
   const [query, setQuery] = useState("")
   const searchRef = useRef(null)
 
   const [isThinking, setIsThinking] = useState(false)
   const [thinkingConvId, setThinkingConvId] = useState(null)
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/conversations', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setConversations(data);
+          if (data.length > 0 && !selectedId) {
+            setSelectedId(data[0].id);
+          } else if (data.length === 0) {
+            createNewChat();
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch conversations", error);
+      }
+    };
+    fetchConversations();
+  }, [token]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -100,12 +124,6 @@ export default function AIAssistantUI() {
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [sidebarOpen, conversations])
-
-  useEffect(() => {
-    if (!selectedId && conversations.length > 0) {
-      createNewChat()
-    }
-  }, [])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations
@@ -131,20 +149,19 @@ export default function AIAssistantUI() {
   }
 
   function createNewChat() {
-    const id = Math.random().toString(36).slice(2)
+    const tempId = `temp-${Math.random().toString(36).slice(2)}`;
     const item = {
-      id,
+      id: tempId,
       title: "New Chat",
       updatedAt: new Date().toISOString(),
-      messageCount: 0,
+      messages: [],
       preview: "Say hello to start...",
       pinned: false,
-      folder: "Work Projects",
-      messages: [], // Ensure messages array is empty for new chats
-    }
-    setConversations((prev) => [item, ...prev])
-    setSelectedId(id)
-    setSidebarOpen(false)
+      folder: null,
+    };
+    setConversations((prev) => [item, ...prev]);
+    setSelectedId(tempId);
+    setSidebarOpen(false);
   }
 
   function createFolder() {
@@ -154,78 +171,86 @@ export default function AIAssistantUI() {
     setFolders((prev) => [...prev, { id: Math.random().toString(36).slice(2), name }])
   }
 
-  function sendMessage(convId, content) {
-    if (!content.trim()) return
-    const now = new Date().toISOString()
-    const userMsg = { id: Math.random().toString(36).slice(2), role: "user", content, createdAt: now }
+  async function sendMessage(convId, content) {
+    if (!content.trim() || !token) return;
 
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id !== convId) return c
-        const msgs = [...(c.messages || []), userMsg]
-        return {
-          ...c,
-          messages: msgs,
-          updatedAt: now,
-          messageCount: msgs.length,
-          preview: content.slice(0, 80),
-        }
-      }),
-    )
+    const now = new Date().toISOString();
+    const userMsg = { id: `temp-user-${Date.now()}`, role: "user", content, createdAt: now };
+    
+    setConversations(prev =>
+      prev.map(c => {
+        if (c.id !== convId) return c;
+        return { ...c, messages: [...(c.messages || []), userMsg] };
+      })
+    );
 
-    setIsThinking(true)
-    setThinkingConvId(convId)
+    setIsThinking(true);
+    setThinkingConvId(convId);
 
-    const currentConvId = convId
-    setTimeout(() => {
-      // Always clear thinking state and generate response for this specific conversation
-      setIsThinking(false)
-      setThinkingConvId(null)
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id !== currentConvId) return c
-          const ack = `Got it — I'll help with that.`
-          const asstMsg = {
-            id: Math.random().toString(36).slice(2),
-            role: "assistant",
-            content: ack,
-            createdAt: new Date().toISOString(),
+    try {
+      const isNewChat = convId.startsWith('temp-');
+      const payload = {
+        conversationId: isNewChat ? null : convId,
+        message: content,
+      };
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const data = await res.json();
+      const assistantMessage = data.message;
+
+      setConversations(prev =>
+        prev.map(c => {
+          if (c.id !== convId) return c;
+          
+          const finalMessages = c.messages.filter(m => !m.id.startsWith('temp-user-'));
+          finalMessages.push(userMsg, assistantMessage);
+
+          if (data.isNewConversation) {
+            return {
+              ...c,
+              id: data.conversationId,
+              title: data.title,
+              messages: [...c.messages, assistantMessage],
+              updatedAt: new Date().toISOString(),
+            };
+          } else {
+            return { ...c, messages: [...c.messages, assistantMessage], updatedAt: new Date().toISOString() };
           }
-          const msgs = [...(c.messages || []), asstMsg]
-          return {
-            ...c,
-            messages: msgs,
-            updatedAt: new Date().toISOString(),
-            messageCount: msgs.length,
-            preview: asstMsg.content.slice(0, 80),
-          }
-        }),
-      )
-    }, 2000)
+        }).map(c => data.isNewConversation && c.id === convId ? {...c, id: data.conversationId, title: data.title} : c)
+      );
+      
+      if (data.isNewConversation) {
+        setSelectedId(data.conversationId);
+      }
+
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setIsThinking(false);
+      setThinkingConvId(null);
+    }
   }
 
   function editMessage(convId, messageId, newContent) {
-    const now = new Date().toISOString()
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id !== convId) return c
-        const msgs = (c.messages || []).map((m) =>
-          m.id === messageId ? { ...m, content: newContent, editedAt: now } : m,
-        )
-        return {
-          ...c,
-          messages: msgs,
-          preview: msgs[msgs.length - 1]?.content?.slice(0, 80) || c.preview,
-        }
-      }),
-    )
+    // This needs to be implemented on the backend
+    console.log("Editing is not yet supported with the backend.");
   }
 
   function resendMessage(convId, messageId) {
-    const conv = conversations.find((c) => c.id === convId)
-    const msg = conv?.messages?.find((m) => m.id === messageId)
-    if (!msg) return
-    sendMessage(convId, msg.content)
+    // This needs to be implemented on the backend
+    console.log("Resending is not yet supported with the backend.");
   }
 
   function pauseThinking() {
@@ -234,8 +259,6 @@ export default function AIAssistantUI() {
   }
 
   function handleUseTemplate(template) {
-    // This will be passed down to the Composer component
-    // The Composer will handle inserting the template content
     if (composerRef.current) {
       composerRef.current.insertTemplate(template.content)
     }

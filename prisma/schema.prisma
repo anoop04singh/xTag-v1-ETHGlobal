@@ -1,49 +1,37 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
 model User {
-  id                  String   @id @default(cuid())
-  nfcId               String   @unique
-  smartAccountAddress String   @unique
+  id                  String         @id @default(cuid())
+  nfcId               String         @unique
+  smartAccountAddress String         @unique
   encryptedSignerKey  String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  createdSubscriptions Subscription[]     @relation("Creator")
-  subscriptions        UserSubscription[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  conversations       Conversation[]
 }
 
-model Subscription {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  price       Float // Stored in USDC
-  interval    String // e.g., "monthly", "yearly"
-  creatorId   String
-  creator     User     @relation("Creator", fields: [creatorId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  subscribers UserSubscription[]
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
-model UserSubscription {
+model Message {
   id             String       @id @default(cuid())
-  userId         String
-  user           User         @relation(fields: [userId], references: [id])
-  subscriptionId String
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
-  status         String // "active", "cancelled", "payment_failed"
-  startDate      DateTime
-  nextBillingDate DateTime
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@unique([userId, subscriptionId])
+  role           String // "user" or "assistant"
+  content        String       @db.Text
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  createdAt      DateTime     @default(now())
 }
