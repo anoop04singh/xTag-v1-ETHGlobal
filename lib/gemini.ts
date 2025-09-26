@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content } from "@google/generative-ai";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -38,20 +38,19 @@ const safetySettings = [
   },
 ];
 
-interface ChatMessage {
-    role: 'user' | 'model';
-    parts: { text: string }[];
-}
-
-export async function getChatResponse(history: ChatMessage[], newMessage: string): Promise<string> {
+export async function getChatResponse(history: Content[], newMessage: string): Promise<string> {
   try {
-    const chatSession = model.startChat({
-      generationConfig,
-      safetySettings,
-      history,
-    });
+    const contents: Content[] = [
+        ...history, 
+        { role: 'user', parts: [{ text: newMessage }] }
+    ];
 
-    const result = await chatSession.sendMessage(newMessage);
+    const result = await model.generateContent({
+        contents,
+        generationConfig,
+        safetySettings,
+    });
+    
     return result.response.text();
   } catch (error) {
     console.error("Error getting response from Gemini:", error);

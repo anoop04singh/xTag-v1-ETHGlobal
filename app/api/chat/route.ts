@@ -55,8 +55,12 @@ export async function POST(request: NextRequest) {
         include: { messages: { orderBy: { createdAt: 'asc' } } },
     });
 
-    // Prepare history for LLM
-    const history = updatedConversation.messages.map(msg => ({
+    if (!updatedConversation) {
+      return NextResponse.json({ error: 'Could not retrieve conversation' }, { status: 500 });
+    }
+
+    // Prepare history for LLM. The history should not include the latest user message.
+    const history = updatedConversation.messages.slice(0, -1).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }],
     }));
