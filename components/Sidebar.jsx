@@ -23,6 +23,7 @@ import SearchModal from "./SearchModal"
 import SettingsPopover from "./SettingsPopover"
 import { cls } from "./utils"
 import { useState } from "react"
+import { useAuth } from "../context/AuthContext"
 
 export default function Sidebar({
   open,
@@ -50,6 +51,7 @@ export default function Sidebar({
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
 }) {
+  const { user, logout } = useAuth();
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
@@ -261,7 +263,7 @@ export default function Sidebar({
             <nav className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-4">
               <SidebarSection
                 icon={<Star className="h-4 w-4" />}
-                title="PINNED CHATS" // Renamed from "PINNED CONVERSATIONS" to "PINNED CHATS"
+                title="PINNED CHATS"
                 collapsed={collapsed.pinned}
                 onToggle={() => setCollapsed((s) => ({ ...s, pinned: !s.pinned }))}
               >
@@ -337,7 +339,7 @@ export default function Sidebar({
               </SidebarSection>
 
               <SidebarSection
-                icon={<FileText className="h-4 w-4" />} // Replaced StarOff with FileText for better template metaphor
+                icon={<FileText className="h-4 w-4" />}
                 title="TEMPLATES"
                 collapsed={collapsed.templates}
                 onToggle={() => setCollapsed((s) => ({ ...s, templates: !s.templates }))}
@@ -381,15 +383,21 @@ export default function Sidebar({
                   <ThemeToggle theme={theme} setTheme={setTheme} />
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">
-                  JD
+              {user && (
+                <div className="mt-2 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60">
+                  <div className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">
+                    {user.smartAccountAddress.substring(0, 2)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium" title={user.smartAccountAddress}>
+                      {`${user.smartAccountAddress.substring(0, 6)}...${user.smartAccountAddress.substring(user.smartAccountAddress.length - 4)}`}
+                    </div>
+                    <button onClick={logout} className="truncate text-xs text-zinc-500 hover:underline dark:text-zinc-400">
+                      Log out
+                    </button>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">John Doe</div>
-                  <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">Pro workspace</div>
-                </div>
-              </div>
+              )}
             </div>
           </motion.aside>
         )}
