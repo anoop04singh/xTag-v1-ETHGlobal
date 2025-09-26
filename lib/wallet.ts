@@ -6,6 +6,9 @@ export async function createSmartAccount() {
   if (!process.env.BICONOMY_BUNDLER_URL) {
     throw new Error("BICONOMY_BUNDLER_URL is not set in .env file");
   }
+  if (!process.env.POLYGON_AMOY_RPC_URL) {
+    throw new Error("POLYGON_AMOY_RPC_URL is not set in .env file");
+  }
 
   // 1. Generate a new private key for the signer
   const signerPrivateKey = generatePrivateKey();
@@ -15,6 +18,7 @@ export async function createSmartAccount() {
   const config: SmartAccountClientOptions = {
     signer,
     bundlerUrl: process.env.BICONOMY_BUNDLER_URL,
+    rpcUrl: process.env.POLYGON_AMOY_RPC_URL,
     chainId: polygonAmoy.id,
   };
 
