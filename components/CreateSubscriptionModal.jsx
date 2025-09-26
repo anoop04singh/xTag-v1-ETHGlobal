@@ -7,6 +7,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [prompt, setPrompt] = useState("")
+  const [price, setPrice] = useState("")
 
   const isEditing = !!editingSubscription
 
@@ -16,18 +17,25 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
         setName(editingSubscription.name || "")
         setDescription(editingSubscription.description || "")
         setPrompt(editingSubscription.prompt || "")
+        setPrice(editingSubscription.price ? String(editingSubscription.price) : "")
       } else {
         setName("")
         setDescription("")
         setPrompt("")
+        setPrice("")
       }
     }
   }, [editingSubscription, isOpen])
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (name.trim() && description.trim() && prompt.trim()) {
-      const subscriptionData = { name: name.trim(), description: description.trim(), prompt: prompt.trim() }
+    if (name.trim() && description.trim() && prompt.trim() && price.trim()) {
+      const subscriptionData = { 
+        name: name.trim(), 
+        description: description.trim(), 
+        prompt: prompt.trim(),
+        price: parseFloat(price) 
+      }
       
       if (isEditing) {
         onCreateSubscription({ ...subscriptionData, id: editingSubscription.id })
@@ -95,15 +103,30 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
                     className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
                   />
                 </div>
+                 <div>
+                  <label htmlFor="subPrice" className="block text-sm font-medium mb-2">
+                    Price (MATIC)
+                  </label>
+                  <input
+                    id="subPrice"
+                    type="number"
+                    step="0.000001"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="e.g., 1.5"
+                    className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+                  />
+                </div>
                 <div>
                   <label htmlFor="subPrompt" className="block text-sm font-medium mb-2">
-                    Agent Prompt
+                    Agent Prompt (Premium Content)
                   </label>
                   <textarea
                     id="subPrompt"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="The detailed prompt for the AI agent to execute for this subscription."
+                    placeholder="The detailed prompt for the AI agent to execute. This is only accessible after purchase."
                     rows={6}
                     className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 resize-none"
                   />
@@ -114,7 +137,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
                   <div className="text-sm text-zinc-600 dark:text-zinc-400">
                     <div className="font-medium mb-1">How do Subscriptions work?</div>
                     <div>
-                      Subscriptions are public prompts that anyone can ask the agent about. The agent will use the prompt you provide here to generate content when requested.
+                      Set a price and define a prompt. Other users can purchase access, and their agent will use your prompt to generate content.
                     </div>
                   </div>
                 </div>
@@ -129,7 +152,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
                   </button>
                   <button
                     type="submit"
-                    disabled={!name.trim() || !description.trim() || !prompt.trim()}
+                    disabled={!name.trim() || !description.trim() || !prompt.trim() || !price.trim()}
                     className="flex-1 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
                   >
                     {isEditing ? "Update Subscription" : "Create Subscription"}

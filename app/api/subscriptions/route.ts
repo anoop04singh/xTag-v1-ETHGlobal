@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
+import { Prisma } from '@prisma/client';
 
 // GET user's own subscriptions
 export async function GET(request: NextRequest) {
@@ -30,8 +31,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, description, prompt } = await request.json();
-    if (!name || !description || !prompt) {
+    const { name, description, prompt, price } = await request.json();
+    if (!name || !description || !prompt || price === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         prompt,
+        price: new Prisma.Decimal(price),
         creatorId: user.id,
       },
     });
