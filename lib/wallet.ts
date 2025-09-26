@@ -1,4 +1,4 @@
-import { createSmartAccountClient } from "@biconomy/account";
+import { createSmartAccountClient, type SmartAccountClientOptions } from "@biconomy/account";
 import { polygonAmoy } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
@@ -11,13 +11,19 @@ export async function createSmartAccount() {
   const signerPrivateKey = generatePrivateKey();
   const signer = privateKeyToAccount(signerPrivateKey);
 
-  // 2. Create the Biconomy Smart Account
-  const biconomySmartAccount = await createSmartAccountClient({
+  // 2. Create the Biconomy Smart Account config
+  const config: SmartAccountClientOptions = {
     signer,
     bundlerUrl: process.env.BICONOMY_BUNDLER_URL,
-    biconomyPaymasterApiKey: process.env.BICONOMY_PAYMASTER_API_KEY,
     chainId: polygonAmoy.id,
-  });
+  };
+
+  // Only add the paymaster API key if it exists in the .env file
+  if (process.env.BICONOMY_PAYMASTER_API_KEY) {
+    config.biconomyPaymasterApiKey = process.env.BICONOMY_PAYMASTER_API_KEY;
+  }
+
+  const biconomySmartAccount = await createSmartAccountClient(config);
 
   // 3. Get the smart account address
   const smartAccountAddress = await biconomySmartAccount.getAccountAddress();
