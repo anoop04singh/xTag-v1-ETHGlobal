@@ -6,14 +6,28 @@ import { getChatResponse, getTitleForConversation } from '@/lib/gemini';
 async function getSubscriptionContext(): Promise<string> {
     const allSubscriptions = await prisma.subscription.findMany();
     if (allSubscriptions.length === 0) {
-        return "";
+        return "You are a helpful AI assistant.";
     }
 
     const subscriptionList = allSubscriptions.map(sub => 
-        `- Name: ${sub.name}\n  Description: ${sub.description}\n  Prompt: ${sub.prompt}`
+        `---
+Subscription Name: "${sub.name}"
+Description: ${sub.description}
+Agent Prompt to use if user runs this subscription: "${sub.prompt}"
+---`
     ).join('\n\n');
 
-    return `You are an AI assistant. You have knowledge of the following user-created subscriptions available on this platform. You can answer questions about them or use their prompts if a user asks to 'run' a subscription.\n\nAvailable Subscriptions:\n${subscriptionList}`;
+    return `You are an AI assistant.
+Below is a list of available, user-created "subscriptions". Each subscription has a name, a description, and a specific "Agent Prompt".
+
+Your primary task is to be a general conversational AI. However, if a user's message explicitly asks to "run", "list", "execute", or inquire about subscriptions, you MUST use the information below.
+
+- If asked to list subscriptions, list them by name and description.
+- If asked to "run" a specific subscription by its name, you MUST use its corresponding "Agent Prompt" to generate the entire response.
+- Otherwise, for all other general conversation, IGNORE this subscription list completely.
+
+Available Subscriptions:
+${subscriptionList}`;
 }
 
 export async function POST(request: NextRequest) {

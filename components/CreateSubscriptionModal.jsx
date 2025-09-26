@@ -54,7 +54,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 max-h-[90vh] flex flex-col"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">{isEditing ? "Edit Subscription" : "Create Subscription"}</h2>
@@ -63,7 +63,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2">
               <div>
                 <label htmlFor="subName" className="block text-sm font-medium mb-2">
                   Subscription Name
