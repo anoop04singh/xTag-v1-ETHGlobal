@@ -1,5 +1,5 @@
-import AIAssistantUI from "../components/AIAssistantUI"
+import NfcTestClient from "../components/NfcTestClient";
 
 export default function Page() {
-  return <AIAssistantUI />
+  return <NfcTestClient />;
 }
