@@ -8,7 +8,7 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
+  model: "gemini-1.5-flash",
 });
 
 const generationConfig = {
@@ -38,7 +38,7 @@ const safetySettings = [
   },
 ];
 
-export async function getChatResponse(history: Content[], newMessage: string): Promise<string> {
+export async function getChatResponse(history: Content[], newMessage: string, systemInstruction?: string): Promise<string> {
   try {
     const contents: Content[] = [
         ...history, 
@@ -49,6 +49,7 @@ export async function getChatResponse(history: Content[], newMessage: string): P
         contents,
         generationConfig,
         safetySettings,
+        systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
     });
     
     return result.response.text();

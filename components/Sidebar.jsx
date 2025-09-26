@@ -11,11 +11,13 @@ import {
   FileText,
   Settings,
   Asterisk,
+  Rss,
 } from "lucide-react"
 import SidebarSection from "./SidebarSection"
 import ConversationRow from "./ConversationRow"
 import FolderRow from "./FolderRow"
 import TemplateRow from "./TemplateRow"
+import SubscriptionRow from "./SubscriptionRow"
 import ThemeToggle from "./ThemeToggle"
 import CreateFolderModal from "./CreateFolderModal"
 import CreateTemplateModal from "./CreateTemplateModal"
@@ -48,6 +50,8 @@ export default function Sidebar({
   templates = [],
   setTemplates = () => {},
   onUseTemplate = () => {},
+  subscriptions = [],
+  onShowCreateSubscription,
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
 }) {
@@ -306,6 +310,30 @@ export default function Sidebar({
                     />
                   ))
                 )}
+              </SidebarSection>
+
+              <SidebarSection
+                icon={<Rss className="h-4 w-4" />}
+                title="SUBSCRIPTIONS"
+                collapsed={collapsed.subscriptions}
+                onToggle={() => setCollapsed((s) => ({ ...s, subscriptions: !s.subscriptions }))}
+              >
+                <div className="-mx-1">
+                  <button
+                    onClick={onShowCreateSubscription}
+                    className="mb-2 inline-flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  >
+                    <Plus className="h-4 w-4" /> Create subscription
+                  </button>
+                  {subscriptions.map((sub) => (
+                    <SubscriptionRow key={sub.id} subscription={sub} />
+                  ))}
+                  {subscriptions.length === 0 && (
+                     <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                       No subscriptions yet. Create one to get started.
+                     </div>
+                  )}
+                </div>
               </SidebarSection>
 
               <SidebarSection

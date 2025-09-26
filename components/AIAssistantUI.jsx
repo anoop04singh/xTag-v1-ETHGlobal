@@ -7,6 +7,7 @@ import Header from "./Header"
 import ChatPane from "./ChatPane"
 import GhostIconButton from "./GhostIconButton"
 import ThemeToggle from "./ThemeToggle"
+import CreateSubscriptionModal from "./CreateSubscriptionModal"
 import { useAuth } from "../context/AuthContext"
 
 export default function AIAssistantUI() {
@@ -46,9 +47,9 @@ export default function AIAssistantUI() {
   const [collapsed, setCollapsed] = useState(() => {
     try {
       const raw = localStorage.getItem("sidebar-collapsed")
-      return raw ? JSON.parse(raw) : { pinned: true, recent: false, folders: true, templates: true }
+      return raw ? JSON.parse(raw) : { pinned: true, recent: false, subscriptions: false, folders: true, templates: true }
     } catch {
-      return { pinned: true, recent: false, folders: true, templates: true }
+      return { pinned: true, recent: false, subscriptions: false, folders: true, templates: true }
     }
   })
   useEffect(() => {
@@ -76,6 +77,8 @@ export default function AIAssistantUI() {
   const [selectedId, setSelectedId] = useState(null)
   const [templates, setTemplates] = useState([])
   const [folders, setFolders] = useState([])
+  const [subscriptions, setSubscriptions] = useState([])
+  const [showCreateSubscriptionModal, setShowCreateSubscriptionModal] = useState(false)
 
   const [query, setQuery] = useState("")
   const searchRef = useRef(null)
@@ -84,26 +87,35 @@ export default function AIAssistantUI() {
   const [thinkingConvId, setThinkingConvId] = useState(null)
 
   useEffect(() => {
-    const fetchConversations = async () => {
+    const fetchData = async () => {
       if (!token) return;
       try {
-        const res = await fetch('/api/conversations', {
+        // Fetch conversations
+        const convRes = await fetch('/api/conversations', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (res.ok) {
-          const data = await res.json();
-          setConversations(data);
-          if (data.length > 0 && !selectedId) {
-            setSelectedId(data[0].id);
-          } else if (data.length === 0) {
+        if (convRes.ok) {
+          const convData = await convRes.json();
+          setConversations(convData);
+          if (convData.length > 0 && !selectedId) {
+            setSelectedId(convData[0].id);
+          } else if (convData.length === 0) {
             createNewChat();
           }
         }
+        // Fetch subscriptions
+        const subRes = await fetch('/api/subscriptions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          setSubscriptions(subData);
+        }
       } catch (error) {
-        console.error("Failed to fetch conversations", error);
+        console.error("Failed to fetch data", error);
       }
     };
-    fetchConversations();
+    fetchData();
   }, [token]);
 
   useEffect(() => {
@@ -169,6 +181,28 @@ export default function AIAssistantUI() {
     if (!name) return
     if (folders.some((f) => f.name.toLowerCase() === name.toLowerCase())) return alert("Folder already exists.")
     setFolders((prev) => [...prev, { id: Math.random().toString(36).slice(2), name }])
+  }
+
+  async function handleCreateSubscription(subscriptionData) {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/subscriptions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(subscriptionData),
+      });
+      if (res.ok) {
+        const newSubscription = await res.json();
+        setSubscriptions(prev => [newSubscription, ...prev]);
+      } else {
+        console.error("Failed to create subscription");
+      }
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+    }
   }
 
   async function sendMessage(convId, content) {
@@ -244,12 +278,10 @@ export default function AIAssistantUI() {
   }
 
   function editMessage(convId, messageId, newContent) {
-    // This needs to be implemented on the backend
     console.log("Editing is not yet supported with the backend.");
   }
 
   function resendMessage(convId, messageId) {
-    // This needs to be implemented on the backend
     console.log("Resending is not yet supported with the backend.");
   }
 
@@ -265,7 +297,6 @@ export default function AIAssistantUI() {
   }
 
   const composerRef = useRef(null)
-
   const selected = conversations.find((c) => c.id === selectedId) || null
 
   return (
@@ -314,6 +345,8 @@ export default function AIAssistantUI() {
           templates={templates}
           setTemplates={setTemplates}
           onUseTemplate={handleUseTemplate}
+          subscriptions={subscriptions}
+          onShowCreateSubscription={() => setShowCreateSubscriptionModal(true)}
         />
 
         <main className="relative flex min-w-0 flex-1 flex-col">
@@ -329,6 +362,11 @@ export default function AIAssistantUI() {
           />
         </main>
       </div>
+      <CreateSubscriptionModal
+        isOpen={showCreateSubscriptionModal}
+        onClose={() => setShowCreateSubscriptionModal(false)}
+        onCreateSubscription={handleCreateSubscription}
+      />
     </div>
   )
 }
