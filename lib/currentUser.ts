@@ -1,35 +1,23 @@
 import { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
-interface UserPayload {
-  id: string;
-  walletAddress: string;
-  iat: number;
-  exp: number;
-}
-
-export const getCurrentUser = async (request: NextRequest): Promise<{ id: string; walletAddress: string } | null> => {
-  try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-      return null;
-    }
-
-    const JWT_SECRET = process.env.JWT_SECRET;
-    if (!JWT_SECRET) {
-      throw new Error('JWT_SECRET environment variable is not set.');
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-    
-    return { id: decoded.id, walletAddress: decoded.walletAddress };
-  } catch (error) {
-    console.error("Error getting current user:", error);
+export async function getCurrentUser(req: NextRequest) {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
-};
+
+  const token = authHeader.substring(7);
+  const decoded = verifyToken(token);
+
+  if (!decoded) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+  });
+
+  return user;
+}

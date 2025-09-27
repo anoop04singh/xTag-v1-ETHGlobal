@@ -17,7 +17,9 @@ export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen
       )}
 
       <div className="flex-1">
-        {/* The link to the test page has been removed. */}
+        <Link href="/test-payment" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
+          Test Payment Flow
+        </Link>
       </div>
 
       <div className="ml-auto flex items-center gap-2">

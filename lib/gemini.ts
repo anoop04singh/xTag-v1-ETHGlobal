@@ -1,47 +1,79 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content } from "@google/generative-ai";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY environment variable is not set.');
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  throw new Error("GEMINI_API_KEY is not set in .env file");
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const genAI = new GoogleGenerativeAI(apiKey);
 
-export async function getChatResponse(history: any[], message: string, systemInstruction: string): Promise<string> {
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash",
+});
+
+const generationConfig = {
+  temperature: 1,
+  topP: 0.95,
+  topK: 64,
+  maxOutputTokens: 8192,
+  responseMimeType: "text/plain",
+};
+
+const safetySettings = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+];
+
+export async function getChatResponse(history: Content[], newMessage: string, systemInstruction?: string): Promise<string> {
   try {
-    const chat = model.startChat({
-      history,
-      generationConfig: {
-        maxOutputTokens: 2000,
-      },
-      systemInstruction: {
-        role: "system",
-        parts: [{ text: systemInstruction }]
-      }
-    });
+    if (typeof newMessage !== 'string' || !newMessage.trim()) {
+      console.error("Gemini Error: newMessage is not a valid string. Value received:", newMessage);
+      throw new Error("Invalid message content provided to AI model. The prompt may be empty.");
+    }
 
-    const result = await chat.sendMessage(message);
-    const response = result.response;
-    return response.text();
+    const contents: Content[] = [
+        ...history, 
+        { role: 'user', parts: [{ text: newMessage }] }
+    ];
+
+    const result = await model.generateContent({
+        contents,
+        generationConfig,
+        safetySettings,
+        systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+    });
+    
+    return result.response.text();
   } catch (error) {
-    console.error("Error getting chat response from Gemini:", error);
-    return "Sorry, I encountered an error while processing your request.";
+    console.error("Error getting response from Gemini:", error);
+    if (error instanceof Error && error.message.includes("Invalid message content")) {
+        throw error;
+    }
+    throw new Error("Failed to get response from AI model.");
   }
 }
 
 export async function getTitleForConversation(firstMessage: string): Promise<string> {
     try {
-        const prompt = `Generate a short, concise title (4 words max) for a conversation that starts with this message: "${firstMessage}"`;
+        const prompt = `Generate a short, concise title (4-5 words max) for a conversation that starts with this message: "${firstMessage}". Just return the title, nothing else.`;
         const result = await model.generateContent(prompt);
-        const response = result.response;
-        let title = response.text().trim().replace(/"/g, '');
-        if (title.length > 50) {
-            title = title.substring(0, 47) + '...';
-        }
-        return title;
+        return result.response.text().replace(/"/g, '').trim();
     } catch (error) {
-        console.error("Error generating title with Gemini:", error);
+        console.error("Error generating title:", error);
         return "New Chat";
     }
 }

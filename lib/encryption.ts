@@ -1,33 +1,43 @@
 import crypto from 'crypto';
 
-const ALGORITHM = 'aes-256-cbc';
-// IMPORTANT: Your encryption key must be 32 characters long.
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-const IV_LENGTH = 16; // For AES, this is always 16
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const SALT_LENGTH = 64;
+const TAG_LENGTH = 16;
+const KEY_LENGTH = 32;
+const PBKDF2_ITERATIONS = 100000;
 
-function getKey() {
-    if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
-        throw new Error('ENCRYPTION_KEY environment variable must be set and be 32 characters long.');
-    }
-    return Buffer.from(ENCRYPTION_KEY, 'utf-8');
+const secret = process.env.ENCRYPTION_SECRET;
+
+if (!secret || secret.length !== 32) {
+  throw new Error('ENCRYPTION_SECRET is not set or is not 32 characters long in .env file');
 }
 
-export function encrypt(text: string): string {
-    const key = getKey();
-    const iv = crypto.randomBytes(IV_LENGTH);
-    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-    let encrypted = cipher.update(text);
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-    return iv.toString('hex') + ':' + encrypted.toString('hex');
-}
+const getKey = (salt: Buffer): Buffer => {
+  return crypto.pbkdf2Sync(secret, salt, PBKDF2_ITERATIONS, KEY_LENGTH, 'sha512');
+};
 
-export function decrypt(text: string): string {
-    const key = getKey();
-    const textParts = text.split(':');
-    const iv = Buffer.from(textParts.shift()!, 'hex');
-    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
-}
+export const encrypt = (text: string): string => {
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  const key = getKey(salt);
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  return Buffer.concat([salt, iv, tag, encrypted]).toString('hex');
+};
+
+export const decrypt = (encryptedText: string): string => {
+  const data = Buffer.from(encryptedText, 'hex');
+  const salt = data.subarray(0, SALT_LENGTH);
+  const iv = data.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+  const tag = data.subarray(SALT_LENGTH + IV_LENGTH, SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
+  const encrypted = data.subarray(SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
+
+  const key = getKey(salt);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(tag);
+
+  return decipher.update(encrypted, undefined, 'utf8') + decipher.final('utf8');
+};
