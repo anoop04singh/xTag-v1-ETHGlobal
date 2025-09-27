@@ -28,7 +28,16 @@ Status: ${status}
 ---`;
     }).join('\n\n');
 
-    return `You are an AI assistant. Users can interact with you conversationally. You also have access to special paid "subscriptions" which can be executed using the command: run "subscription name". You should not try to run them yourself, just inform the user about the command if they ask about subscriptions. Here is a list of available subscriptions for your reference:
+    return `You are an AI assistant. You have access to special paid "subscriptions" that can be executed with a command.
+
+Your primary role is to be a helpful conversational AI.
+
+Regarding subscriptions:
+- You MUST NOT attempt to run or purchase subscriptions yourself.
+- If a user asks about a subscription or how to use it, you MUST inform them to use the command: run "subscription name".
+- For example, if they ask "How do I get the tech news?", you should reply: "You can get the tech news by running the command: run "Daily Tech News"".
+
+This is the complete list of available subscriptions for your reference:
 ${subscriptionList}`;
 }
 
@@ -55,51 +64,48 @@ export async function POST(request: NextRequest) {
 
         if (!subscription) {
             const failureMessage = await prisma.message.create({
-                data: { role: 'assistant', content: `I could not find a subscription named "${subName}".`, conversationId: conversationId },
+                data: { role: 'assistant', content: `I could not find a subscription named "${subName}". Please check the name and try again.`, conversationId: conversationId },
             });
             return NextResponse.json({ message: failureMessage });
         }
 
-        const purchase = await prisma.purchase.findUnique({ where: { userId_subscriptionId: { userId: user.id, subscriptionId: subscription.id } } });
-        const isCreator = user.id === subscription.creatorId;
+        try {
+            // This is the transactional part. It attempts to access the resource.
+            // If payment is required, makePaidRequest will handle the entire on-chain x402 flow.
+            // If the user's wallet has insufficient funds, it will throw an error here.
+            const { data, txHash } = await makePaidRequest(user.id, `/api/subscriptions/${subscription.id}/access`, userToken);
+            
+            const purchase = await prisma.purchase.findUnique({ where: { userId_subscriptionId: { userId: user.id, subscriptionId: subscription.id } } });
 
-        let premiumPrompt: string;
-        let wasNewPurchase = false;
-
-        if (purchase || isCreator) {
-            premiumPrompt = subscription.prompt;
-        } else {
-            try {
-                const { data, txHash } = await makePaidRequest(user.id, `/api/subscriptions/${subscription.id}/access`, userToken);
-                
-                if (txHash) {
-                    await prisma.purchase.create({
-                        data: { userId: user.id, subscriptionId: subscription.id, txHash }
-                    });
-                    wasNewPurchase = true;
-                    premiumPrompt = data.prompt;
-                } else {
-                    throw new Error("Payment transaction hash was not received.");
-                }
-            } catch (error: any) {
-                console.error("Payment flow error:", error);
-                const failureMessage = await prisma.message.create({
-                    data: { role: 'assistant', content: `I'm sorry, the payment failed: ${error.message}`, conversationId: conversationId },
+            let wasNewPurchase = false;
+            // The presence of a txHash is cryptographic proof of a new, successful on-chain transaction.
+            if (!purchase && txHash) {
+                await prisma.purchase.create({
+                    data: { userId: user.id, subscriptionId: subscription.id, txHash }
                 });
-                return NextResponse.json({ message: failureMessage });
+                wasNewPurchase = true;
             }
+
+            const premiumPrompt = data.prompt;
+            const aiResponseContent = await getChatResponse([], premiumPrompt);
+
+            let finalContent = aiResponseContent;
+            if (wasNewPurchase) {
+                finalContent = `Payment of ${subscription.price.toString()} ${subscription.currency} for "${subName}" was successful! Here is your premium content:\n\n${aiResponseContent}`;
+            }
+            
+            const assistantMessage = await prisma.message.create({
+                data: { role: 'assistant', content: finalContent, conversationId: conversationId },
+            });
+            return NextResponse.json({ message: assistantMessage });
+
+        } catch (error: any) {
+            console.error("Payment flow error:", error);
+            const failureMessage = await prisma.message.create({
+                data: { role: 'assistant', content: `I'm sorry, the transaction failed: ${error.message}`, conversationId: conversationId },
+            });
+            return NextResponse.json({ message: failureMessage });
         }
-        
-        const aiResponseContent = await getChatResponse([], premiumPrompt);
-        let finalContent = aiResponseContent;
-        if (wasNewPurchase) {
-            finalContent = `Payment of ${subscription.price.toString()} ${subscription.currency} for "${subName}" was successful! Here is the result:\n\n${aiResponseContent}`;
-        }
-        
-        const assistantMessage = await prisma.message.create({
-            data: { role: 'assistant', content: finalContent, conversationId: conversationId },
-        });
-        return NextResponse.json({ message: assistantMessage });
     }
 
     // --- Standard Chat Flow ---
