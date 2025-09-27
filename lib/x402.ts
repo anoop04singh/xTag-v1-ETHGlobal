@@ -16,7 +16,6 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   const signer = privateKeyToAccount(privateKey as `0x${string}`);
   console.log(`[x402] Decrypted private key for smart wallet: ${user.smartAccountAddress}`);
 
-  // Re-create the full Biconomy client to ensure it's aware of the Paymaster
   const config: SmartAccountClientOptions = {
     signer,
     bundlerUrl: process.env.BICONOMY_BUNDLER_URL!,
@@ -28,11 +27,14 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   }
   const biconomyWalletClient = await createSmartAccountClient(config);
 
-  // Pass the Biconomy client to the payment wrapper. It will now handle gas sponsorship.
-  const fetchWithPayment = wrapFetchWithPayment(fetch, biconomyWalletClient, {
+  // x402-fetch can accept a `sendTransaction` function directly.
+  // We provide the one from our Biconomy client, ensuring it handles UserOps and Paymaster logic.
+  const sendTransaction = biconomyWalletClient.sendTransaction.bind(biconomyWalletClient);
+
+  const fetchWithPayment = wrapFetchWithPayment(fetch, sendTransaction, {
     facilitatorUrl: process.env.X402_FACILITATOR_URL,
   });
-  console.log(`[x402] Fetch wrapped with Biconomy client and facilitator: ${process.env.X402_FACILITATOR_URL}`);
+  console.log(`[x402] Fetch wrapped with Biconomy's sendTransaction and facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
   try {
     const response = await fetchWithPayment(fullUrl, {

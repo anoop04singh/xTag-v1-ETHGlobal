@@ -3,7 +3,8 @@ import { getCurrentUser } from '@/lib/currentUser';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  console.log(`\n--- [ACCESS API] New Request for Subscription ID: ${params.id} ---`);
+  const subscriptionId = params.id;
+  console.log(`\n--- [ACCESS API] New Request for Subscription ID: ${subscriptionId} ---`);
   try {
     const user = await getCurrentUser(request);
     if (!user) {
@@ -12,7 +13,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
     console.log(`[ACCESS API] Authenticated user: ${user.id}`);
 
-    const subscriptionId = params.id;
     const result = await getSubscriptionAccess(user.id, subscriptionId);
 
     if (result.access) {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: result.error }, { status: result.status || 500 });
     }
   } catch (error) {
-    console.error(`[ACCESS API] CRITICAL ERROR for subscription ${params.id}:`, error);
+    console.error(`[ACCESS API] CRITICAL ERROR for subscription ${subscriptionId}:`, error);
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
   }
 }
