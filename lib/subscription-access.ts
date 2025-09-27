@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { parseUnits } from 'viem';
 
 export async function getSubscriptionAccess(userId: string, subscriptionId: string) {
   console.log(`[ACCESS LIB] Checking access for user ${userId} to subscription ${subscriptionId}`);
@@ -37,19 +38,21 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
   // User does not have access, return payment requirements
   console.log(`[ACCESS LIB] Access denied. Returning payment requirements.`);
   
-  const resourceUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/subscriptions/${subscriptionId}/access`;
+  // Assuming USDC has 6 decimals, which is standard.
+  const amountInSmallestUnit = parseUnits(subscription.price.toString(), 6);
 
   const paymentRequirements = {
-    resource: resourceUrl,
-    description: subscription.description,
-    mimeType: 'application/json',
     accepts: [{
       scheme: 'exact',
       network: 'polygon-amoy',
       asset: subscription.currency.toLowerCase(),
       payTo: subscription.creator.smartAccountAddress,
-      maxAmountRequired: subscription.price.toString(),
+      maxAmountRequired: amountInSmallestUnit.toString(),
       maxTimeoutSeconds: 300,
+      extra: {
+        name: subscription.name,
+        description: subscription.description,
+      },
     }],
   };
 
