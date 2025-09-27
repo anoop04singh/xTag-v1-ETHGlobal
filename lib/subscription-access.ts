@@ -53,12 +53,12 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
       const facilitatorUrl = 'https://facilitator.x402.rs';
 
-      // FIX: Flatten the payload to match the facilitator's expected structure.
-      const payloadWithVersion = {
+      // FIX: Construct the paymentPayload by adding x402Version to the entire decoded object.
+      const finalPaymentPayload = {
         x402Version: 1,
-        ...decodedPayload.payload, // Spread the nested object containing signature and authorization
+        ...decodedPayload,
       };
-      console.log("[ACCESS LIB] Final payload prepared for facilitator:", JSON.stringify(payloadWithVersion));
+      console.log("[ACCESS LIB] Final payload prepared for facilitator:", JSON.stringify(finalPaymentPayload));
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
@@ -66,7 +66,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paymentPayload: payloadWithVersion, 
+          paymentPayload: finalPaymentPayload, 
           paymentRequirements: paymentRequirements.accepts[0],
         }),
       });
@@ -85,7 +85,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              paymentPayload: payloadWithVersion,
+              paymentPayload: finalPaymentPayload,
               paymentRequirements: paymentRequirements.accepts[0],
             }),
           });
