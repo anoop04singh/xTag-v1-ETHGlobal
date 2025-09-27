@@ -34,6 +34,7 @@ Here are the available commands, their descriptions, and their costs:
 - "nft-metadata": Retrieves detailed metadata for a specific NFT. Requires a contract address and a token ID. Cost: 0.002 USDC.
 - "trading-signals": Provides the latest cryptocurrency trading signals. Cost: 0.10 USDC.
 - "documentation": Accesses technical documentation and guides. Cost: 0.02 USDC.
+- "wallet-balance": Fetches your ERC20 token portfolio on the Polygon network using your connected wallet. Cost: 0.002 USDC.
 
 INTERACTION FLOW:
 1.  When a user's query matches a command's functionality, you MUST ask for their permission and any required information.
@@ -49,6 +50,9 @@ EXAMPLES:
 
 - User: "the contract is 0x123... and the token is 456"
   Your response: "Great. I will now fetch the metadata for that NFT. Please confirm. [DYAD_ACTION:run "nft-metadata" --contract_address 0x123... --token_id 456]"
+
+- User: "what's in my wallet?" or "show my portfolio"
+  Your response: "I can fetch your ERC20 token portfolio on the Polygon network using your connected wallet. This action costs 0.002 USDC. Would you like me to proceed? [DYAD_ACTION:run "wallet-balance"]"
 
 IMPORTANT:
 - Always state the cost when asking for permission.
@@ -95,6 +99,18 @@ function formatApiResponse(command: string, data: any): string {
                 formattedContent += `**Documentation Content:**\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
             }
             break;
+        case 'wallet-balance':
+            if (data.balances && data.balances.data && Array.isArray(data.balances.data) && data.balances.data.length > 0) {
+                formattedContent += `**Your Token Portfolio on Polygon:**\n`;
+                data.balances.data.forEach((token: any) => {
+                    const balance = parseFloat(token.balance_in_decimal).toFixed(4);
+                    const value = token.value_in_usd ? `$${parseFloat(token.value_in_usd).toFixed(2)}` : 'N/A';
+                    formattedContent += `- **${token.name} (${token.symbol})**: ${balance} (Value: ${value})\n`;
+                });
+            } else {
+                formattedContent += `It looks like your wallet on Polygon doesn't have any ERC20 tokens, or they couldn't be fetched at this time.`;
+            }
+            break;
         default:
             formattedContent += `\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
             break;
@@ -115,7 +131,11 @@ async function handlePaidRequest(userId: string, command: string, args: Record<s
     const retries = 2;
     const delay = 1000;
     const path = `/api/${command}`;
-    const params = command === 'nft-metadata' ? { contract_address: args.contract_address, token_id: args.token_id } : {};
+    const params = command === 'wallet-balance' 
+        ? { address: user.walletAddress } 
+        : command === 'nft-metadata' 
+        ? { contract_address: args.contract_address, token_id: args.token_id } 
+        : {};
 
     for (let i = 0; i <= retries; i++) {
         try {
@@ -174,7 +194,7 @@ export async function POST(request: NextRequest) {
 
     const commandRegex = /^run "([^"]+)"(.*)$/;
     const commandMatch = message.trim().match(commandRegex);
-    const validCommands = ["get-data", "nft-metadata", "trading-signals", "documentation"];
+    const validCommands = ["get-data", "nft-metadata", "trading-signals", "documentation", "wallet-balance"];
 
     if (commandMatch && validCommands.includes(commandMatch[1])) {
         const command = commandMatch[1];

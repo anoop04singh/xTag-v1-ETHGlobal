@@ -24,6 +24,11 @@ const endpoints = [
     command: 'run "documentation"',
     description: "Access technical documentation and guides. Useful for developers looking for information on how to integrate with our services.",
   },
+  {
+    name: "Wallet Portfolio",
+    command: 'run "wallet-balance"',
+    description: "Fetches your ERC20 token portfolio on the Polygon network using your connected wallet address.",
+  },
 ];
 
 export default function ExplorePane() {
