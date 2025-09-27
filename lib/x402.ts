@@ -4,6 +4,7 @@ import { createSmartAccountClient, type SmartAccountClientOptions } from "@bicon
 import { polygonAmoy } from "viem/chains";
 import { decrypt } from './encryption';
 import { prisma } from './db';
+import { type WalletClient } from 'viem';
 
 export async function makePaidRequest(userId: string, relativeUrl: string, userToken: string) {
   const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}${relativeUrl}`;
@@ -25,16 +26,42 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   if (process.env.BICONOMY_PAYMASTER_API_KEY) {
     config.biconomyPaymasterApiKey = process.env.BICONOMY_PAYMASTER_API_KEY;
   }
-  const biconomyWalletClient = await createSmartAccountClient(config);
+  const biconomySmartAccount = await createSmartAccountClient(config);
 
-  // x402-fetch can accept a `sendTransaction` function directly.
-  // We provide the one from our Biconomy client, ensuring it handles UserOps and Paymaster logic.
-  const sendTransaction = biconomyWalletClient.sendTransaction.bind(biconomyWalletClient);
+  // Create a Viem-compatible WalletClient adapter for x402-fetch
+  const walletClientAdapter = {
+    account: {
+      address: user.smartAccountAddress as `0x${string}`,
+      type: 'local' as const,
+    },
+    chain: polygonAmoy,
+    sendTransaction: biconomySmartAccount.sendTransaction.bind(biconomySmartAccount),
+    // Add dummy properties and functions to satisfy the WalletClient type expected by x402-fetch
+    key: 'biconomy-adapter',
+    type: 'biconomy-adapter',
+    transport: { key: 'http', name: 'HTTP JSON-RPC', type: 'http', retryCount: 0, retryDelay: 150, timeout: 10000 },
+    writeContract: () => { throw new Error('writeContract not implemented on adapter'); },
+    addChain: () => { throw new Error('addChain not implemented on adapter'); },
+    deployContract: () => { throw new Error('deployContract not implemented on adapter'); },
+    getAddresses: () => { throw new Error('getAddresses not implemented on adapter'); },
+    getChainId: async () => Promise.resolve(polygonAmoy.id),
+    getPermissions: () => { throw new Error('getPermissions not implemented on adapter'); },
+    requestAddresses: () => { throw new Error('requestAddresses not implemented on adapter'); },
+    requestPermissions: () => { throw new Error('requestPermissions not implemented on adapter'); },
+    signMessage: () => { throw new Error('signMessage not implemented on adapter'); },
+    signTypedData: () => { throw new Error('signTypedData not implemented on adapter'); },
+    switchChain: () => { throw new Error('switchChain not implemented on adapter'); },
+    watchAsset: () => { throw new Error('watchAsset not implemented on adapter'); },
+    sendRawTransaction: () => { throw new Error('sendRawTransaction not implemented on adapter'); },
+    signTransaction: () => { throw new Error('signTransaction not implemented on adapter'); },
+    call: () => { throw new Error('call not implemented on adapter'); },
+    estimateGas: () => { throw new Error('estimateGas not implemented on adapter'); },
+  } as unknown as WalletClient;
 
-  const fetchWithPayment = wrapFetchWithPayment(fetch, sendTransaction, {
+  const fetchWithPayment = wrapFetchWithPayment(fetch, walletClientAdapter, {
     facilitatorUrl: process.env.X402_FACILITATOR_URL,
   });
-  console.log(`[x402] Fetch wrapped with Biconomy's sendTransaction and facilitator: ${process.env.X402_FACILITATOR_URL}`);
+  console.log(`[x402] Fetch wrapped with Biconomy client adapter and facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
   try {
     const response = await fetchWithPayment(fullUrl, {
