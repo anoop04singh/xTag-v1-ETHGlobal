@@ -11,6 +11,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
   });
 
   if (!subscription) {
+    console.log(`[ACCESS LIB] Subscription with ID ${subscriptionId} not found.`);
     return { access: false, error: 'Subscription not found', status: 404 };
   }
 
@@ -49,16 +50,17 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
 
   if (paymentHeader) {
     console.log("[ACCESS LIB] X-PAYMENT header found. Attempting to verify and settle...");
+    console.log("[ACCESS LIB] Header value (first 50 chars):", paymentHeader.substring(0, 50));
     try {
-      const facilitatorUrl = 'https://facilitator.x402.rs';
+      const facilitatorUrl = 'https://x402.polygon.technology';
+      console.log(`[ACCESS LIB] Using facilitator: ${facilitatorUrl}`);
 
-      // FIX: Send the original base64 header directly to the facilitator, wrapped in the correct structure.
       const finalBodyForFacilitator = {
         x402Version: 1,
         paymentHeader: paymentHeader,
         paymentRequirements: paymentRequirements.accepts[0],
       };
-      console.log("[ACCESS LIB] Final body prepared for facilitator:", JSON.stringify(finalBodyForFacilitator));
+      console.log("[ACCESS LIB] Body prepared for facilitator:", JSON.stringify(finalBodyForFacilitator, null, 2));
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
@@ -68,12 +70,13 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
         body: JSON.stringify(finalBodyForFacilitator),
       });
       
+      const verifyResultText = await verifyRes.text();
+      console.log(`[ACCESS LIB] Facilitator /verify responded with status ${verifyRes.status} and body: ${verifyResultText}`);
+
       if (!verifyRes.ok) {
-        const errorText = await verifyRes.text();
-        console.error(`[ACCESS LIB] Facilitator /verify returned an error: ${verifyRes.status} ${errorText}`);
-        // Fall through to return 402
+        console.error(`[ACCESS LIB] Facilitator /verify returned a non-OK status.`);
       } else {
-        const verifyResult = await verifyRes.json();
+        const verifyResult = JSON.parse(verifyResultText);
         if (!verifyResult.isValid) {
           console.log("[ACCESS LIB] Facilitator verification failed:", verifyResult.invalidReason || 'Unknown reason');
         } else {
@@ -85,13 +88,19 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(finalBodyForFacilitator),
           });
-          const settleResult = await settleRes.json();
-
-          if (settleRes.ok && settleResult.success) {
-            console.log(`[ACCESS LIB] Settlement successful. TxHash: ${settleResult.txHash}. Granting access.`);
-            return { access: true, prompt: subscription.prompt, txHash: settleResult.txHash };
+          const settleResultText = await settleRes.text();
+          console.log(`[ACCESS LIB] Facilitator /settle responded with status ${settleRes.status} and body: ${settleResultText}`);
+          
+          if (settleRes.ok) {
+            const settleResult = JSON.parse(settleResultText);
+            if (settleResult.success) {
+              console.log(`[ACCESS LIB] Settlement successful. TxHash: ${settleResult.txHash}. Granting access.`);
+              return { access: true, prompt: subscription.prompt, txHash: settleResult.txHash };
+            } else {
+               console.error("[ACCESS LIB] Facilitator settlement failed:", settleResult.error || 'Settlement returned success:false.');
+            }
           } else {
-            console.error("[ACCESS LIB] Facilitator settlement failed:", settleResult.error || 'Settlement returned not OK.');
+            console.error("[ACCESS LIB] Facilitator /settle returned a non-OK status.");
           }
         }
       }
@@ -100,6 +109,6 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
     }
   }
 
-  console.log(`[ACCESS LIB] No valid payment proof. Returning 402 with payment requirements.`);
+  console.log(`[ACCESS LIB] No valid payment proof. Returning 402 with payment requirements:`, JSON.stringify(paymentRequirements, null, 2));
   return { access: false, paymentRequirements, status: 402 };
 }

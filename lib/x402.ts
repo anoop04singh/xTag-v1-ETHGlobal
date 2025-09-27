@@ -23,12 +23,14 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   });
   console.log(`[x402] Viem WalletClient created for address: ${walletClient.account.address}`);
 
+  const facilitatorUrl = 'https://x402.polygon.technology';
   const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient, {
-    facilitatorUrl: 'https://facilitator.x402.rs', // Use the correct facilitator URL
+    facilitatorUrl: facilitatorUrl,
   });
-  console.log(`[x402] Fetch wrapped with WalletClient and facilitator: https://facilitator.x402.rs`);
+  console.log(`[x402] Fetch wrapped with WalletClient and facilitator: ${facilitatorUrl}`);
 
   try {
+    console.log(`[x402] Making initial request to ${fullUrl}`);
     const response = await fetchWithPayment(fullUrl, {
       headers: { 'Authorization': `Bearer ${userToken}` },
     });
@@ -37,20 +39,22 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
 
     if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[x402] ERROR: Final response was not OK. Status: ${response.status}`, errorText);
+        console.error(`[x402] ERROR: Final response was not OK. Status: ${response.status}. Body:`, errorText);
         throw new Error(`Payment flow failed with status ${response.status}: ${errorText}`);
     }
 
     const paymentResponseHeader = response.headers.get('x-payment-response');
     let txHash = null;
     if (paymentResponseHeader) {
-        txHash = JSON.parse(Buffer.from(paymentResponseHeader, 'base64').toString('utf-8')).txHash;
-        console.log(`[x402] SUCCESS: On-chain transaction confirmed. Tx Hash: ${txHash}`);
+        const decodedHeader = JSON.parse(Buffer.from(paymentResponseHeader, 'base64').toString('utf-8'));
+        txHash = decodedHeader.txHash;
+        console.log(`[x402] SUCCESS: Decoded x-payment-response header. Tx Hash: ${txHash}`);
     } else {
-        console.log('[x402] SUCCESS: Access granted. This may be a previously owned item.');
+        console.log('[x402] SUCCESS: Access granted without a new payment (e.g., already owned).');
     }
     
     const data = await response.json();
+    console.log('[x402] Successfully parsed final response JSON.');
     return { data, txHash };
   } catch (error) {
     console.error('[x402] CRITICAL ERROR during makePaidRequest:', error);
