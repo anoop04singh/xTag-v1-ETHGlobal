@@ -51,7 +51,14 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
     console.log("[ACCESS LIB] X-PAYMENT header found. Attempting to verify and settle...");
     try {
       const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
-      const facilitatorUrl = 'https://x402.polygon.technology'; // Reverting to the compatible facilitator URL
+      const facilitatorUrl = 'https://x402.polygon.technology';
+
+      // FIX: As per the error log, ensure the x402Version is present in the payload.
+      const payloadWithVersion = {
+        ...decodedPayload,
+        x402Version: decodedPayload.x402Version || "1.0",
+      };
+      console.log("[ACCESS LIB] Ensured x402Version is present in payload.");
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
@@ -59,8 +66,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // Using the structure the facilitator expects, based on previous error logs
-          paymentPayload: decodedPayload, 
+          paymentPayload: payloadWithVersion, 
           paymentRequirements: paymentRequirements.accepts[0],
         }),
       });
@@ -79,7 +85,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              paymentPayload: decodedPayload,
+              paymentPayload: payloadWithVersion,
               paymentRequirements: paymentRequirements.accepts[0],
             }),
           });
