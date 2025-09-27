@@ -4,12 +4,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  Star,
-  Clock,
   Asterisk,
 } from "lucide-react"
-import SidebarSection from "./SidebarSection"
-import ConversationRow from "./ConversationRow"
 import ThemeToggle from "./ThemeToggle"
 import { cls } from "./utils"
 import { useAuth } from "../context/AuthContext"
@@ -20,14 +16,7 @@ export default function Sidebar({
   onClose,
   theme,
   setTheme,
-  collapsed,
-  setCollapsed,
-  pinned,
-  recent,
-  selectedId,
-  onSelect,
-  togglePin,
-  createNewChat,
+  clearChat,
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
 }) {
@@ -54,9 +43,9 @@ export default function Sidebar({
 
         <div className="flex flex-col items-center gap-4 pt-4">
           <button
-            onClick={createNewChat}
+            onClick={clearChat}
             className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
-            title="New Chat"
+            title="Clear Chat"
           >
             <Plus className="h-5 w-5" />
           </button>
@@ -122,62 +111,13 @@ export default function Sidebar({
 
             <div className="px-3 pt-3">
               <button
-                onClick={createNewChat}
+                onClick={clearChat}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-white dark:text-zinc-900"
-                title="New Chat (⌘N)"
+                title="Clear Chat"
               >
-                <Plus className="h-4 w-4" /> Start New Chat
+                <Plus className="h-4 w-4" /> Clear Chat
               </button>
             </div>
-
-            <nav className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-4">
-              <SidebarSection
-                icon={<Star className="h-4 w-4" />}
-                title="PINNED CHATS"
-                collapsed={collapsed.pinned}
-                onToggle={() => setCollapsed((s) => ({ ...s, pinned: !s.pinned }))}
-              >
-                {pinned.length === 0 ? (
-                  <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                    Pin important threads for quick access.
-                  </div>
-                ) : (
-                  pinned.map((c) => (
-                    <ConversationRow
-                      key={c.id}
-                      data={c}
-                      active={c.id === selectedId}
-                      onSelect={() => onSelect(c.id)}
-                      onTogglePin={() => togglePin(c.id)}
-                    />
-                  ))
-                )}
-              </SidebarSection>
-
-              <SidebarSection
-                icon={<Clock className="h-4 w-4" />}
-                title="RECENT"
-                collapsed={collapsed.recent}
-                onToggle={() => setCollapsed((s) => ({ ...s, recent: !s.recent }))}
-              >
-                {recent.length === 0 ? (
-                  <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                    No conversations yet. Start a new one!
-                  </div>
-                ) : (
-                  recent.map((c) => (
-                    <ConversationRow
-                      key={c.id}
-                      data={c}
-                      active={c.id === selectedId}
-                      onSelect={() => onSelect(c.id)}
-                      onTogglePin={() => togglePin(c.id)}
-                      showMeta
-                    />
-                  ))
-                )}
-              </SidebarSection>
-            </nav>
 
             <div className="mt-auto border-t border-zinc-200/60 dark:border-zinc-800">
               {user && <WalletInfo />}

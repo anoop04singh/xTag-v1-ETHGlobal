@@ -26,23 +26,23 @@ function ThinkingMessage({ onPause }) {
   )
 }
 
-export default function ChatPane({ conversation, onSend, isThinking, onPauseThinking }) {
+export default function ChatPane({ messages = [], onSend, isThinking, onPauseThinking }) {
   const [busy, setBusy] = useState(false)
-
-  if (!conversation) return null
-
-  const messages = Array.isArray(conversation.messages) ? conversation.messages : []
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8">
-        <div className="mb-2 text-3xl font-serif tracking-tight sm:text-4xl md:text-5xl">
-          <span className="block leading-[1.05] font-sans text-2xl">{conversation.title}</span>
-        </div>
-        
         {messages.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            No messages yet. Say hello or try the command `run "get-data"`.
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="text-center">
+              <div className="inline-grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg mb-4">
+                <span className="text-2xl font-bold">✱</span>
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight">How can I help you today?</h2>
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                Try the command <code className="font-mono bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-0.5">run "get-data"</code> to test the payment flow.
+              </p>
+            </div>
           </div>
         ) : (
           <>
@@ -68,5 +68,3 @@ export default function ChatPane({ conversation, onSend, isThinking, onPauseThin
         busy={busy}
       />
     </div>
-  )
-}
