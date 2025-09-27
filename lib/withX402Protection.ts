@@ -51,7 +51,7 @@ export function withX402Protection(handler: ProtectedHandler) {
         const facilitatorUrl = 'https://x402.polygon.technology';
         
         const paymentPayload = {
-            x402Version: 1, // Moved inside as per facilitator error
+            x402Version: 1, // Correctly placed inside the payload
             scheme: 'exact',
             network: 'polygon-amoy',
             resource: `${process.env.NEXT_PUBLIC_APP_URL}/api/subscriptions/${subscriptionId}/access`,
@@ -77,12 +77,11 @@ export function withX402Protection(handler: ProtectedHandler) {
                 body: JSON.stringify(bodyForFacilitator),
             });
 
-            let verifyResult;
             if (!verifyRes.ok) {
                 const errorText = await verifyRes.text();
                 console.error(`[x402 Middleware] Facilitator /verify returned an error. Status: ${verifyRes.status}. Body: ${errorText}`);
             } else {
-                verifyResult = await verifyRes.json();
+                const verifyResult = await verifyRes.json();
                 console.log(`[x402 Middleware] Facilitator /verify responded with status ${verifyRes.status}`, verifyResult);
 
                 if (verifyResult.isValid) {
@@ -108,8 +107,8 @@ export function withX402Protection(handler: ProtectedHandler) {
 
       console.log(`[x402 Middleware] No valid access method. Returning 402 Payment Required.`);
       const paymentRequirements = {
+        x402Version: 1, // Add version to the root of the 402 response
         accepts: [{
-            x402Version: 1, // Added for consistency
             scheme: 'exact',
             network: 'polygon-amoy',
             resource: `${process.env.NEXT_PUBLIC_APP_URL}/api/subscriptions/${subscriptionId}/access`,
