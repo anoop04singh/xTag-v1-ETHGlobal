@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Asterisk } from 'lucide-react';
 
 export default function LoginPage() {
   const [nfcId, setNfcId] = useState('');
@@ -19,10 +18,11 @@ export default function LoginPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <div className="w-full max-w-sm p-8 space-y-6 bg-white rounded-2xl shadow-xl dark:bg-zinc-900">
         <div className="flex flex-col items-center space-y-2">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg dark:from-zinc-200 dark:to-zinc-300 dark:text-zinc-900">
-                <Asterisk className="h-6 w-6" />
+            <div className="h-12 w-12">
+                <img src="/XtagLogoBK.png" alt="xTag Logo" className="h-12 w-12 dark:hidden" />
+                <img src="/XtagLogoWh.png" alt="xTag Logo" className="h-12 w-12 hidden dark:block" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-center">Welcome</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-center">Welcome to xTag</h1>
             <p className="text-sm text-center text-zinc-500 dark:text-zinc-400">
             Enter your NFC ID to sign in or create a new account.
             </p>
@@ -57,6 +57,17 @@ export default function LoginPage() {
           )}
         </form>
       </div>
+      <footer className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">
+        Made with ❤️ by{' '}
+        <a
+            href="https://github.com/anoop04singh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:underline text-zinc-700 dark:text-zinc-300"
+        >
+            0xanoop
+        </a>
+      </footer>
     </div>
   );
 }
