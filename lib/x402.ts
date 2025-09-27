@@ -29,6 +29,7 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   const axiosInstance = axios.create();
   const axiosWithPayment = withPaymentInterceptor(axiosInstance, walletClient, {
     facilitatorUrl: facilitatorUrl,
+    paymentRequirementsSelector: (response) => response.data.accepts[0],
   });
   console.log(`[x402-axios] Axios wrapped with WalletClient and facilitator: ${facilitatorUrl}`);
 
