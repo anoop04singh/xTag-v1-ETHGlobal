@@ -32,11 +32,11 @@ export function paymentMiddleware(handler: ProtectedHandler) {
         return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
       }
 
-      // 1. Check for direct ownership (creator or previous purchase)
       if (user.id === subscription.creatorId) {
         console.log(`[x402 Server Middleware] Access granted: User is the creator.`);
         return handler(req, { params }, { user, subscription });
       }
+
       const purchase = await prisma.purchase.findUnique({
         where: { userId_subscriptionId: { userId: user.id, subscriptionId } },
       });
@@ -45,7 +45,6 @@ export function paymentMiddleware(handler: ProtectedHandler) {
         return handler(req, { params }, { user, subscription });
       }
 
-      // 2. Check for an incoming payment header
       const paymentHeader = req.headers.get('x-payment');
       if (paymentHeader) {
         console.log("[x402 Server Middleware] X-PAYMENT header found. Verifying with facilitator...");
@@ -98,8 +97,7 @@ export function paymentMiddleware(handler: ProtectedHandler) {
         }
       }
 
-      // 3. If no access, return 402 Payment Required
-      console.log(`[x402 Server Middleware] No access method. Returning 402 Payment Required.`);
+      console.log(`[x402 Server Middleware] No valid access method. Returning 402 Payment Required.`);
       const paymentRequirements = {
         x402Version: 1,
         accepts: [{

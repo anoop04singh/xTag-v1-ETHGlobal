@@ -15,14 +15,13 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   const account = privateKeyToAccount(privateKey as `0x${string}`);
   console.log(`[x402-axios] Decrypted private key for wallet: ${account.address}`);
 
-  const axiosInstance = axios.create();
-  
+  // Simplified interceptor setup, as per documentation.
+  // The library will automatically select the first valid payment requirement from the 'accepts' array.
   const axiosWithPayment = withPaymentInterceptor(
-    axiosInstance, 
-    account,
-    (requirements) => requirements[0] // The interceptor passes the 'accepts' array directly.
+    axios.create(), 
+    account
   );
-  console.log(`[x402-axios] Axios wrapped with payment interceptor and a selector.`);
+  console.log(`[x402-axios] Axios wrapped with payment interceptor.`);
 
   try {
     console.log(`[x402-axios] Making initial request to ${fullUrl}`);
