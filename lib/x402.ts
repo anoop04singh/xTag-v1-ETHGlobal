@@ -16,7 +16,6 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   const account = privateKeyToAccount(privateKey as `0x${string}`);
   console.log(`[x402] Decrypted private key for wallet: ${account.address}`);
 
-  // Create a standard Viem WalletClient. This is much simpler.
   const walletClient = createWalletClient({
     account,
     chain: polygonAmoy,
@@ -30,17 +29,17 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   console.log(`[x402] Fetch wrapped with standard WalletClient and facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
   try {
+    // The wrapFetchWithPayment function will handle the 402 response internally.
+    // It will only return here once the payment is successful (with a 200 OK)
+    // or it will throw an error if the on-chain transaction fails.
     const response = await fetchWithPayment(fullUrl, {
       headers: { 'Authorization': `Bearer ${userToken}` },
     });
 
     console.log(`[x402] Response received from API with status: ${response.status}`);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[x402] ERROR: Payment failed or was rejected. Status: ${response.status}`, errorText);
-      throw new Error(`Payment failed: ${errorText}`);
-    }
+    // The premature error check has been removed. The library now handles the 402 flow.
+    // If we get here, it means the final response was successful (e.g., 200 OK).
 
     const txHash = response.headers.get('x-402-tx-hash');
     if (txHash) {
@@ -53,6 +52,7 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
     return { data, txHash };
   } catch (error) {
     console.error('[x402] CRITICAL ERROR during makePaidRequest:', error);
+    // Re-throw the error so the calling function can handle it.
     throw error;
   }
 }
