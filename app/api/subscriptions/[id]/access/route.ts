@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { withX402Protection } from '@/lib/withX402Protection';
+import { paymentMiddleware } from '@/lib/x402-server';
 
-// This is the core logic that runs ONLY after access has been granted.
+// This is the core logic that runs ONLY after access has been granted by the middleware.
 const accessHandler = async (
   req: NextRequest,
   context: { params: { id: string } },
@@ -13,7 +13,7 @@ const accessHandler = async (
   const headers = new Headers();
   // If there was a transaction, include the hash in the response header for the client.
   if (txHash) {
-    headers.set('X-PAYMENT-RESPONSE', Buffer.from(JSON.stringify({ txHash })).toString('base64'));
+    headers.set('X-Payment-Response', Buffer.from(JSON.stringify({ txHash })).toString('base64'));
   }
 
   return new Response(JSON.stringify({ prompt: subscription.prompt }), {
@@ -23,4 +23,4 @@ const accessHandler = async (
 };
 
 // Wrap the handler with the protection middleware.
-export const GET = withX402Protection(accessHandler);
+export const GET = paymentMiddleware(accessHandler);
