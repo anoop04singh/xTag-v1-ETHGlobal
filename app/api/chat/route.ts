@@ -48,44 +48,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const authHeader = request.headers.get('Authorization');
+    const userToken = authHeader?.split(' ')[1];
+    if (!userToken) {
+        return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
+    }
+
     const { conversationId, message } = await request.json();
     if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
 
-    // Check if the user is trying to run a subscription
     const runMatch = message.match(/run\s+"([^"]+)"/i);
     if (runMatch) {
         const subName = runMatch[1];
         const subscription = await prisma.subscription.findFirst({ where: { name: { equals: subName, mode: 'insensitive' } } });
 
         if (subscription) {
-            const purchase = await prisma.purchase.findUnique({ where: { userId_subscriptionId: { userId: user.id, subscriptionId: subscription.id } } });
+            try {
+                const { data, txHash } = await makePaidRequest(user.id, `/api/subscriptions/${subscription.id}/access`, userToken);
+                
+                const purchase = await prisma.purchase.findUnique({ where: { userId_subscriptionId: { userId: user.id, subscriptionId: subscription.id } } });
 
-            if (!purchase && user.id !== subscription.creatorId) {
-                // User doesn't own it, initiate payment
-                try {
-                    const data = await makePaidRequest(user.id, `/api/subscriptions/${subscription.id}/access`);
-                    
-                    // Payment successful, create purchase record
+                let wasNewPurchase = false;
+                if (!purchase && txHash) {
                     await prisma.purchase.create({
-                        data: {
-                            userId: user.id,
-                            subscriptionId: subscription.id,
-                            // txHash can be added here if returned from makePaidRequest
-                        }
+                        data: { userId: user.id, subscriptionId: subscription.id, txHash }
                     });
-
-                    // Now use the premium prompt
-                    const premiumPrompt = data.prompt;
-                    const aiResponseContent = await getChatResponse([], premiumPrompt); // Fresh context for premium prompt
-                    
-                    const assistantMessage = await prisma.message.create({
-                        data: { role: 'assistant', content: `Payment successful! Here is the result from the "${subName}" subscription:\n\n${aiResponseContent}`, conversationId: conversationId },
-                    });
-                    return NextResponse.json({ message: assistantMessage });
-
-                } catch (error: any) {
-                    return NextResponse.json({ error: `Payment failed: ${error.message}` }, { status: 500 });
+                    wasNewPurchase = true;
                 }
+
+                const premiumPrompt = data.prompt;
+                const aiResponseContent = await getChatResponse([], premiumPrompt);
+
+                let finalContent = aiResponseContent;
+                if (wasNewPurchase) {
+                    finalContent = `Payment of ${subscription.price.toString()} MATIC for "${subName}" was successful! Here is the result:\n\n${aiResponseContent}`;
+                }
+                
+                const assistantMessage = await prisma.message.create({
+                    data: { role: 'assistant', content: finalContent, conversationId: conversationId },
+                });
+                return NextResponse.json({ message: assistantMessage });
+
+            } catch (error: any) {
+                console.error("Payment flow error:", error);
+                const failureMessage = await prisma.message.create({
+                    data: { role: 'assistant', content: `I'm sorry, the payment failed: ${error.message}`, conversationId: conversationId },
+                });
+                return NextResponse.json({ message: failureMessage });
             }
         }
     }
