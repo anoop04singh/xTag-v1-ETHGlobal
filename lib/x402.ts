@@ -14,21 +14,20 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   if (!user) throw new Error('User not found');
 
   const privateKey = decrypt(user.encryptedSignerKey);
-  const signer = privateKeyToAccount(privateKey as `0x${string}`);
-  console.log(`[x402] Decrypted private key for EOA owner: ${signer.address}`);
+  const signerAccount = privateKeyToAccount(privateKey as `0x${string}`);
+  console.log(`[x402] Decrypted private key for EOA owner: ${signerAccount.address}`);
 
   // 1. Create a standard Viem WalletClient for the EOA signer (the owner of the smart account)
-  // This client can properly sign messages and typed data.
   const eoaWalletClient = createWalletClient({
-    account: signer,
+    account: signerAccount,
     chain: polygonAmoy,
     transport: http(process.env.POLYGON_AMOY_RPC_URL!),
   });
 
   // 2. Create the Biconomy Smart Account client
-  // This client is used to send transactions from the smart account address with gas sponsorship.
+  // The signer MUST be a WalletClient, not just an Account object.
   const config: SmartAccountClientOptions = {
-    signer,
+    signer: eoaWalletClient,
     bundlerUrl: process.env.BICONOMY_BUNDLER_URL!,
     rpcUrl: process.env.POLYGON_AMOY_RPC_URL!,
     chainId: polygonAmoy.id,
