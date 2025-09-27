@@ -59,8 +59,20 @@ IMPORTANT:
 
 function formatApiResponse(command: string, data: any): string {
     if (command === 'nft-metadata' && data.metadata && data.metadata.data && Array.isArray(data.metadata.data)) {
-        const count = data.metadata.data.length;
-        return `✅ I found details for ${count} NFT(s). You can view them now. [DYAD_NFT_DATA:${JSON.stringify(data.metadata.data)}]`;
+        const nfts = new Map();
+        data.metadata.data.forEach((item: any) => {
+            const key = `${item.contract_address}-${item.token_id}`;
+            if (!nfts.has(key)) {
+                nfts.set(key, { ...item, marketplaces: [] });
+            }
+            if (item.marketplace) {
+                nfts.get(key).marketplaces.push(item.marketplace);
+            }
+        });
+        const processedNfts = Array.from(nfts.values());
+        const count = processedNfts.length;
+
+        return `✅ I found details for ${count} NFT(s). You can view them now. [DYAD_NFT_DATA:${JSON.stringify(processedNfts)}]`;
     }
 
     let formattedContent = `✅ **Successfully fetched data from "${command}"**\n\n`;

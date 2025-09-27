@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const NftAttribute = ({ trait_type, value }) => (
   <div className="flex justify-between items-center text-xs p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-md">
@@ -16,7 +17,6 @@ const NftAttribute = ({ trait_type, value }) => (
 const NftCard = ({ nft }) => {
   let attributes = nft.attributes;
 
-  // Handle attributes being a stringified JSON array
   if (typeof attributes === 'string' && attributes.trim().startsWith('[')) {
     try {
       attributes = JSON.parse(attributes);
@@ -27,6 +27,7 @@ const NftCard = ({ nft }) => {
   }
 
   const hasAttributes = Array.isArray(attributes) && attributes.length > 0;
+  const hasMarketplaces = Array.isArray(nft.marketplaces) && nft.marketplaces.length > 0;
 
   return (
     <Card className="overflow-hidden">
@@ -56,6 +57,16 @@ const NftCard = ({ nft }) => {
             </div>
           </div>
         )}
+        {hasMarketplaces && (
+          <div className={hasAttributes ? "mt-4 space-y-2" : "space-y-2"}>
+            <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Available on</h4>
+            <div className="flex flex-wrap gap-2">
+              {nft.marketplaces.map((market, index) => (
+                <Badge key={index} variant="secondary">{market}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="bg-zinc-50 dark:bg-zinc-800/50 px-4 py-2">
         <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
@@ -73,7 +84,7 @@ export default function NftMetadataModal({ isOpen, onClose, data }) {
         <DialogHeader>
           <DialogTitle>NFT Metadata Results</DialogTitle>
           <DialogDescription>
-            Found {data?.length || 0} NFT(s) matching your query.
+            Found {data?.length || 0} unique NFT(s) matching your query.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
