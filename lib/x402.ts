@@ -1,9 +1,8 @@
 import { wrapFetchWithPayment } from 'x402-fetch';
 import { privateKeyToAccount } from 'viem/accounts';
-import { polygonAmoy } from "viem/chains";
 import { decrypt } from './encryption';
 import { prisma } from './db';
-import { createWalletClient, http } from 'viem';
+import { createSmartAccountClient } from '@biconomy/account';
 
 export async function makePaidRequest(userId: string, relativeUrl: string, userToken: string) {
   const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}${relativeUrl}`;
@@ -13,33 +12,27 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   if (!user) throw new Error('User not found');
 
   const privateKey = decrypt(user.encryptedSignerKey);
-  const account = privateKeyToAccount(privateKey as `0x${string}`);
-  console.log(`[x402] Decrypted private key for wallet: ${account.address}`);
+  const signer = privateKeyToAccount(privateKey as `0x${string}`);
+  console.log(`[x402] Decrypted private key for signer: ${signer.address}`);
 
-  const walletClient = createWalletClient({
-    account,
-    chain: polygonAmoy,
-    transport: http(process.env.POLYGON_AMOY_RPC_URL!),
+  const biconomySmartAccount = await createSmartAccountClient({
+    signer,
+    bundlerUrl: process.env.BICONOMY_BUNDLER_URL!,
   });
-  console.log(`[x402] Standard viem WalletClient created for address: ${walletClient.account.address}`);
+  const smartAccountAddress = await biconomySmartAccount.getAccountAddress();
+  console.log(`[x402] Biconomy smart account client created for address: ${smartAccountAddress}`);
 
-  const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient, {
+  const fetchWithPayment = wrapFetchWithPayment(fetch, biconomySmartAccount, {
     facilitatorUrl: process.env.X402_FACILITATOR_URL,
   });
-  console.log(`[x402] Fetch wrapped with standard WalletClient and facilitator: ${process.env.X402_FACILITATOR_URL}`);
+  console.log(`[x402] Fetch wrapped with Biconomy smart account and facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
   try {
-    // The wrapFetchWithPayment function will handle the 402 response internally.
-    // It will only return here once the payment is successful (with a 200 OK)
-    // or it will throw an error if the on-chain transaction fails.
     const response = await fetchWithPayment(fullUrl, {
       headers: { 'Authorization': `Bearer ${userToken}` },
     });
 
     console.log(`[x402] Response received from API with status: ${response.status}`);
-
-    // The premature error check has been removed. The library now handles the 402 flow.
-    // If we get here, it means the final response was successful (e.g., 200 OK).
 
     const txHash = response.headers.get('x-402-tx-hash');
     if (txHash) {
@@ -52,7 +45,6 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
     return { data, txHash };
   } catch (error) {
     console.error('[x402] CRITICAL ERROR during makePaidRequest:', error);
-    // Re-throw the error so the calling function can handle it.
     throw error;
   }
 }
