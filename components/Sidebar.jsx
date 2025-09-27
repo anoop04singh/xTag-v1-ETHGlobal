@@ -4,7 +4,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  Asterisk,
 } from "lucide-react"
 import ThemeToggle from "./ThemeToggle"
 import { cls } from "./utils"
@@ -84,10 +83,11 @@ export default function Sidebar({
           >
             <div className="flex items-center gap-2 border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm dark:from-zinc-200 dark:to-zinc-300 dark:text-zinc-900">
-                  <Asterisk className="h-4 w-4" />
+                <div className="h-8 w-8">
+                    <img src="/XtagLogoBK.png" alt="xTag Logo" className="h-8 w-8 dark:hidden" />
+                    <img src="/XtagLogoWh.png" alt="xTag Logo" className="h-8 w-8 hidden dark:block" />
                 </div>
-                <div className="text-sm font-semibold tracking-tight">AI Assistant</div>
+                <div className="text-sm font-semibold tracking-tight">xTag</div>
               </div>
               <div className="ml-auto flex items-center gap-1">
                 <button

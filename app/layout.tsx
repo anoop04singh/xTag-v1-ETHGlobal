@@ -6,9 +6,9 @@ import './globals.css'
 import { AuthProvider } from '../context/AuthContext'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'xTag',
+  description: 'Your AI assistant, powered by xTag. Created with love by 0xanoop.',
+  authors: [{ name: '0xanoop' }],
 }
 
 export default function RootLayout({
@@ -19,6 +19,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/XtagLogoBK.png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/XtagLogoWh.png" media="(prefers-color-scheme: dark)" />
         <style>{`
 html {
   font-family: ${GeistSans.style.fontFamily};
