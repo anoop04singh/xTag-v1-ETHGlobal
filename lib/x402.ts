@@ -21,38 +21,38 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
     chain: polygonAmoy,
     transport: http(process.env.POLYGON_AMOY_RPC_URL!),
   });
-  console.log(`[x402] Standard viem WalletClient created for address: ${walletClient.account.address}`);
+  console.log(`[x402] Viem WalletClient created for address: ${walletClient.account.address}`);
 
   const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient, {
     facilitatorUrl: process.env.X402_FACILITATOR_URL,
   });
-  console.log(`[x402] Fetch wrapped with standard WalletClient and facilitator: ${process.env.X402_FACILITATOR_URL}`);
+  console.log(`[x402] Fetch wrapped with WalletClient and facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
   try {
-    // The wrapFetchWithPayment function will handle the 402 response internally.
-    // It will only return here once the payment is successful (with a 200 OK)
-    // or it will throw an error if the on-chain transaction fails.
+    // The library will now handle the full 402 flow, and the server will verify the payment.
     const response = await fetchWithPayment(fullUrl, {
       headers: { 'Authorization': `Bearer ${userToken}` },
     });
 
-    console.log(`[x402] Response received from API with status: ${response.status}`);
+    console.log(`[x402] Final response received from API with status: ${response.status}`);
 
-    // The premature error check has been removed. The library now handles the 402 flow.
-    // If we get here, it means the final response was successful (e.g., 200 OK).
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[x402] ERROR: Final response was not OK. Status: ${response.status}`, errorText);
+        throw new Error(`Payment flow failed with status ${response.status}: ${errorText}`);
+    }
 
     const txHash = response.headers.get('x-402-tx-hash');
     if (txHash) {
       console.log(`[x402] SUCCESS: On-chain transaction confirmed. Tx Hash: ${txHash}`);
     } else {
-      console.log('[x402] SUCCESS: Access granted without a new transaction (user likely already owns the item).');
+      console.log('[x402] SUCCESS: Access granted. This may be a previously owned item.');
     }
     
     const data = await response.json();
     return { data, txHash };
   } catch (error) {
     console.error('[x402] CRITICAL ERROR during makePaidRequest:', error);
-    // Re-throw the error so the calling function can handle it.
     throw error;
   }
 }
