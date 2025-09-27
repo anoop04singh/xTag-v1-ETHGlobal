@@ -110,6 +110,8 @@ async function handlePaidRequest(userId: string, command: string, args: Record<s
             console.log(`[CHAT API] Making paid request to ${path} with params:`, params);
             const response = await api.get(path, { params });
             
+            console.log('[CHAT API] Raw data received from endpoint:', JSON.stringify(response.data, null, 2));
+
             const paymentResponse = response.headers['x-payment-response'] 
                 ? decodeXPaymentResponse(response.headers['x-payment-response'])
                 : null;
