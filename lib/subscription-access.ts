@@ -51,12 +51,12 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
     console.log("[ACCESS LIB] X-PAYMENT header found. Attempting to verify and settle...");
     try {
       const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
-      const facilitatorUrl = 'https://facilitator.x402.rs'; // Use the correct facilitator URL
+      const facilitatorUrl = 'https://facilitator.x402.rs';
 
-      // FIX: Ensure x402Version is the first field in the payload object.
+      // FIX: Flatten the payload to match the facilitator's expected structure.
       const payloadWithVersion = {
         x402Version: 1,
-        ...decodedPayload,
+        ...decodedPayload.payload, // Spread the nested object containing signature and authorization
       };
       console.log("[ACCESS LIB] Final payload prepared for facilitator:", JSON.stringify(payloadWithVersion));
 
