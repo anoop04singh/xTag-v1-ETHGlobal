@@ -7,6 +7,9 @@ import axios from 'axios';
 import { Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { withPaymentInterceptor, decodeXPaymentResponse } from 'x402-axios';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const PAID_RESOURCE_BASE_URL = 'http://localhost:4020';
 const PAID_RESOURCE_PATH = '/get-data';
