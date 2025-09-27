@@ -1,5 +1,7 @@
 import { wrapFetchWithPayment } from 'x402-fetch';
 import { privateKeyToAccount } from 'viem/accounts';
+import { createSmartAccountClient, type SmartAccountClientOptions } from "@biconomy/account";
+import { polygonAmoy } from "viem/chains";
 import { decrypt } from './encryption';
 import { prisma } from './db';
 
@@ -11,14 +13,26 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   if (!user) throw new Error('User not found');
 
   const privateKey = decrypt(user.encryptedSignerKey);
-  const account = privateKeyToAccount(privateKey as `0x${string}`);
+  const signer = privateKeyToAccount(privateKey as `0x${string}`);
   console.log(`[x402] Decrypted private key for smart wallet: ${user.smartAccountAddress}`);
 
-  // Use the standard global `fetch` API, which is what the library is designed for.
-  const fetchWithPayment = wrapFetchWithPayment(fetch, account, {
+  // Re-create the full Biconomy client to ensure it's aware of the Paymaster
+  const config: SmartAccountClientOptions = {
+    signer,
+    bundlerUrl: process.env.BICONOMY_BUNDLER_URL!,
+    rpcUrl: process.env.POLYGON_AMOY_RPC_URL!,
+    chainId: polygonAmoy.id,
+  };
+  if (process.env.BICONOMY_PAYMASTER_API_KEY) {
+    config.biconomyPaymasterApiKey = process.env.BICONOMY_PAYMASTER_API_KEY;
+  }
+  const biconomyWalletClient = await createSmartAccountClient(config);
+
+  // Pass the Biconomy client to the payment wrapper. It will now handle gas sponsorship.
+  const fetchWithPayment = wrapFetchWithPayment(fetch, biconomyWalletClient, {
     facilitatorUrl: process.env.X402_FACILITATOR_URL,
   });
-  console.log(`[x402] Fetch wrapped with payment logic using facilitator: ${process.env.X402_FACILITATOR_URL}`);
+  console.log(`[x402] Fetch wrapped with Biconomy client and facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
   try {
     const response = await fetchWithPayment(fullUrl, {

@@ -14,13 +14,11 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
     return { access: false, error: 'Subscription not found', status: 404 };
   }
 
-  // Check if the user is the creator
   if (userId === subscription.creatorId) {
     console.log(`[ACCESS LIB] Access granted: User is the creator.`);
     return { access: true, prompt: subscription.prompt };
   }
 
-  // Check if the user has already purchased this subscription
   const purchase = await prisma.purchase.findUnique({
     where: {
       userId_subscriptionId: {
@@ -35,13 +33,12 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
     return { access: true, prompt: subscription.prompt };
   }
 
-  // User does not have access, return payment requirements
-  console.log(`[ACCESS LIB] Access denied. Returning payment requirements based on working demo structure.`);
+  console.log(`[ACCESS LIB] Access denied. Returning payment requirements.`);
   
+  // Convert price to smallest unit (USDC has 6 decimals)
   const amountInSmallestUnit = parseUnits(subscription.price.toString(), 6);
   const resourceUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/subscriptions/${subscriptionId}/access`;
 
-  // This is the single payment requirement object, matching the demo's `buildPaymentRequirements`
   const paymentRequirement = {
     scheme: 'exact',
     network: 'polygon-amoy',
@@ -51,10 +48,10 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
     payTo: subscription.creator.smartAccountAddress,
     maxAmountRequired: amountInSmallestUnit.toString(),
     maxTimeoutSeconds: 300,
+    // Use the actual contract address from environment variables
     asset: process.env.USDC_CONTRACT_ADDRESS,
   };
 
-  // The final response body must be an object with a single "accepts" key, which is an array.
   const paymentRequirements = {
     accepts: [paymentRequirement]
   };
