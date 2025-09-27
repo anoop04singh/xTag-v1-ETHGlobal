@@ -43,7 +43,6 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       maxAmountRequired: amountInSmallestUnit.toString(),
       maxTimeoutSeconds: 300,
       asset: process.env.USDC_CONTRACT_ADDRESS,
-      // FIX: Added the required 'extra' field for the 'exact' scheme.
       extra: {
         name: "USD Coin",
         version: "2"
@@ -54,22 +53,23 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
   if (paymentHeader) {
     console.log("[ACCESS LIB] X-PAYMENT header found. Verifying with facilitator...");
     try {
+      const decodedPayload = Buffer.from(paymentHeader, 'base64').toString('utf-8');
+      const paymentPayload = JSON.parse(decodedPayload);
+
       const facilitatorUrl = `${process.env.X402_FACILITATOR_URL}/verify`;
       const verificationResponse = await fetch(facilitatorUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           x402Version: 1,
-          paymentHeader,
+          paymentPayload: paymentPayload, // FIX: Send the decoded payload object
           paymentRequirements: paymentRequirements.accepts[0],
         }),
       });
 
-      // FIX: Added robust error handling for non-JSON responses.
       if (!verificationResponse.ok) {
           const errorText = await verificationResponse.text();
           console.error(`[ACCESS LIB] Facilitator returned an error: ${verificationResponse.status} ${errorText}`);
-          // Fall through to return 402, as verification failed.
       } else {
         const verificationResult = await verificationResponse.json();
         if (verificationResult.isValid) {
