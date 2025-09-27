@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { wrapAxiosWithPayment } from 'x402-axios';
+import { withPaymentInterceptor } from 'x402-axios';
 import { privateKeyToAccount } from 'viem/accounts';
 import { polygonAmoy } from "viem/chains";
 import { decrypt } from './encryption';
@@ -27,7 +27,7 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   const facilitatorUrl = 'https://x402.polygon.technology';
   
   const axiosInstance = axios.create();
-  const axiosWithPayment = wrapAxiosWithPayment(axiosInstance, walletClient, {
+  const axiosWithPayment = withPaymentInterceptor(axiosInstance, walletClient, {
     facilitatorUrl: facilitatorUrl,
   });
   console.log(`[x402-axios] Axios wrapped with WalletClient and facilitator: ${facilitatorUrl}`);
