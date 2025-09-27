@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       accepts: [{
         scheme: 'exact',
         network: 'polygon-amoy',
-        asset: 'usdc',
+        asset: subscription.currency.toLowerCase(),
         payTo: subscription.creator.smartAccountAddress,
         maxAmountRequired: subscription.price.toString(),
         maxTimeoutSeconds: 300,
