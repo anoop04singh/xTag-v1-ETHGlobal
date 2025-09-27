@@ -32,11 +32,6 @@ export default function AIAssistantUI() {
   const [messages, setMessages] = useState([])
   const [isThinking, setIsThinking] = useState(false)
 
-  const clearChat = () => {
-    setMessages([]);
-    setSidebarOpen(false);
-  }
-
   async function sendMessage(content) {
     if (!content.trim() || !token) return;
 
@@ -90,7 +85,6 @@ export default function AIAssistantUI() {
           setTheme={setTheme}
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}
-          clearChat={clearChat}
         />
 
         <main className="relative flex min-w-0 flex-1 flex-col">

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
 } from "lucide-react"
 import ThemeToggle from "./ThemeToggle"
 import { cls } from "./utils"
@@ -15,7 +14,6 @@ export default function Sidebar({
   onClose,
   theme,
   setTheme,
-  clearChat,
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
 }) {
@@ -37,16 +35,6 @@ export default function Sidebar({
             title="Open sidebar"
           >
             <PanelLeftOpen className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center gap-4 pt-4">
-          <button
-            onClick={clearChat}
-            className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
-            title="Clear Chat"
-          >
-            <Plus className="h-5 w-5" />
           </button>
         </div>
       </motion.aside>
@@ -109,18 +97,11 @@ export default function Sidebar({
               </div>
             </div>
 
-            <div className="px-3 pt-3">
-              <button
-                onClick={clearChat}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-white dark:text-zinc-900"
-                title="Clear Chat"
-              >
-                <Plus className="h-4 w-4" /> Clear Chat
-              </button>
+            <div className="flex-1 overflow-y-auto">
+              {user && <WalletInfo />}
             </div>
 
-            <div className="mt-auto border-t border-zinc-200/60 dark:border-zinc-800">
-              {user && <WalletInfo />}
+            <div className="border-t border-zinc-200/60 dark:border-zinc-800">
               <div className="flex items-center gap-2 px-3 py-3">
                 <button onClick={logout} className="text-xs text-zinc-500 hover:underline dark:text-zinc-400">
                   Log out
