@@ -36,27 +36,31 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
   }
 
   // User does not have access, return payment requirements
-  console.log(`[ACCESS LIB] Access denied. Returning payment requirements based on working demo structure.`);
+  console.log(`[ACCESS LIB] Access denied. Returning payment requirements that match the x402-fetch schema.`);
   
+  // Assuming USDC has 6 decimals, which is standard.
   const amountInSmallestUnit = parseUnits(subscription.price.toString(), 6);
   const resourceUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/subscriptions/${subscriptionId}/access`;
 
-  // This is the single payment requirement object, matching the demo's `buildPaymentRequirements`
-  const paymentRequirement = {
-    scheme: 'exact',
-    network: 'polygon-amoy',
-    resource: resourceUrl,
-    description: `Premium content: ${subscription.name}`,
-    mimeType: 'application/json',
-    payTo: subscription.creator.smartAccountAddress,
-    maxAmountRequired: amountInSmallestUnit.toString(),
-    maxTimeoutSeconds: 300,
-    asset: process.env.USDC_CONTRACT_ADDRESS,
-  };
-
-  // The final response body must be an object with a single "accepts" key, which is an array.
   const paymentRequirements = {
-    accepts: [paymentRequirement]
+    // Top-level fields required by the Zod schema in x402-fetch
+    resource: resourceUrl,
+    description: `Access to the "${subscription.name}" subscription.`,
+    mimeType: 'application/json',
+    
+    // The 'accepts' array containing the on-chain details
+    accepts: [{
+      scheme: 'exact',
+      network: 'polygon-amoy',
+      asset: subscription.currency.toLowerCase(),
+      payTo: subscription.creator.smartAccountAddress,
+      maxAmountRequired: amountInSmallestUnit.toString(),
+      maxTimeoutSeconds: 300,
+      extra: {
+        name: subscription.name,
+        description: subscription.description,
+      },
+    }],
   };
 
   return { access: false, paymentRequirements, status: 402 };

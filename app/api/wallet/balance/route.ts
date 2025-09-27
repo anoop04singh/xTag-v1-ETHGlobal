@@ -5,17 +5,17 @@ import { getCurrentUser } from '@/lib/currentUser';
 
 const usdcContractABI = [
   {
-    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
+    "constant": true,
+    "inputs": [{ "name": "_owner", "type": "address" }],
     "name": "balanceOf",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
+    "outputs": [{ "name": "balance", "type": "uint256" }],
     "type": "function"
   },
   {
+    "constant": true,
     "inputs": [],
     "name": "decimals",
-    "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
-    "stateMutability": "view",
+    "outputs": [{ "name": "", "type": "uint8" }],
     "type": "function"
   }
 ] as const;
