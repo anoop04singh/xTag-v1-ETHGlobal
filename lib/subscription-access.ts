@@ -52,20 +52,24 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
     try {
       const facilitatorUrl = 'https://facilitator.x402.rs';
 
-      // FIX: Send the original base64 header and add x402Version at the root level, as per the spec.
-      const verifyPayload = {
-        x402Version: 1,
-        paymentHeader: paymentHeader,
+      // FIX: Decode the header and construct the body exactly as the facilitator expects.
+      const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
+
+      const finalBodyForFacilitator = {
+        paymentPayload: {
+          x402Version: 1,
+          ...decodedPayload
+        },
         paymentRequirements: paymentRequirements.accepts[0],
       };
-      console.log("[ACCESS LIB] Final payload prepared for facilitator:", JSON.stringify(verifyPayload));
+      console.log("[ACCESS LIB] Final body prepared for facilitator:", JSON.stringify(finalBodyForFacilitator));
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
       const verifyRes = await fetch(`${facilitatorUrl}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(verifyPayload),
+        body: JSON.stringify(finalBodyForFacilitator),
       });
       
       if (!verifyRes.ok) {
@@ -79,16 +83,10 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
           console.log("[ACCESS LIB] Verification successful. Calling facilitator /settle endpoint...");
           
           // Step 2: Settle the payment
-          const settlePayload = {
-            x402Version: 1,
-            paymentHeader: paymentHeader,
-            paymentRequirements: paymentRequirements.accepts[0],
-          };
-
           const settleRes = await fetch(`${facilitatorUrl}/settle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settlePayload),
+            body: JSON.stringify(finalBodyForFacilitator),
           });
           const settleResult = await settleRes.json();
 
