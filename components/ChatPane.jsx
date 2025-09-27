@@ -93,7 +93,7 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
                     actionCommand={actionCommand}
                     onActionConfirm={onSend}
                   >
-                    <div className="whitespace-pre-wrap">{cleanContent}</div>
+                    {cleanContent}
                   </Message>
                   {nftData && (
                     <div className="flex justify-start pl-10">

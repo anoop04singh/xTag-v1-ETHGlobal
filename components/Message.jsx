@@ -14,7 +14,7 @@ export default function Message({ role, children, actionCommand, onActionConfirm
       )}
       <div
         className={cls(
-          "prose prose-sm dark:prose-invert max-w-[80%] rounded-2xl px-3 py-2 shadow-sm",
+          "prose prose-sm dark:prose-invert max-w-[80%] rounded-2xl px-3 py-2 shadow-sm whitespace-pre-wrap",
           isUser
             ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 prose-p:text-white dark:prose-p:text-zinc-900"
             : "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800",
