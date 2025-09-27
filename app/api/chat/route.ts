@@ -8,10 +8,9 @@ import { Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { withPaymentInterceptor, decodeXPaymentResponse } from 'x402-axios';
 
-// The new simple server endpoint
-const PAID_RESOURCE_URL = 'http://localhost:4020/get-data';
+const PAID_RESOURCE_BASE_URL = 'http://localhost:4020';
+const PAID_RESOURCE_PATH = '/get-data';
 
-// Simplified context for the AI
 async function getAIContext(): Promise<string> {
     return `You are an AI assistant. You have access to one special command that provides data.
 - To use the command, the user must type: run "get-data"
@@ -30,11 +29,11 @@ async function handlePaidRequest(userId: string) {
     const account = privateKeyToAccount(privateKey);
     console.log(`[CHAT API] Initialized account for wallet: ${account.address}`);
 
-    const api = withPaymentInterceptor(axios.create(), account);
+    const api = withPaymentInterceptor(axios.create({ baseURL: PAID_RESOURCE_BASE_URL }), account);
 
     try {
-        console.log(`[CHAT API] Making paid request to ${PAID_RESOURCE_URL}`);
-        const response = await api.get(PAID_RESOURCE_URL);
+        console.log(`[CHAT API] Making paid request to ${PAID_RESOURCE_BASE_URL}${PAID_RESOURCE_PATH}`);
+        const response = await api.get(PAID_RESOURCE_PATH);
         
         const paymentResponse = response.headers['x-payment-response'] 
             ? decodeXPaymentResponse(response.headers['x-payment-response'])

@@ -1,6 +1,7 @@
 "use client"
 import { MoreHorizontal, Menu } from "lucide-react"
 import GhostIconButton from "./GhostIconButton"
+import Link from "next/link"
 
 export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen }) {
   return (
@@ -16,7 +17,9 @@ export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen
       )}
 
       <div className="flex-1">
-        {/* This space is now open for future elements */}
+        <Link href="/test-payment" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
+          Test Payment Flow
+        </Link>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
