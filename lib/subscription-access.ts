@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db';
-import { parseUnits } from 'viem';
 
 export async function getSubscriptionAccess(userId: string, subscriptionId: string) {
   console.log(`[ACCESS LIB] Checking access for user ${userId} to subscription ${subscriptionId}`);
@@ -36,25 +35,14 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
   }
 
   // User does not have access, return payment requirements
-  console.log(`[ACCESS LIB] Access denied. Returning payment requirements that match the x402-fetch schema.`);
-  
-  // Assuming USDC has 6 decimals, which is standard.
-  const amountInSmallestUnit = parseUnits(subscription.price.toString(), 6);
-  const resourceUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/subscriptions/${subscriptionId}/access`;
-
+  console.log(`[ACCESS LIB] Access denied. Returning payment requirements.`);
   const paymentRequirements = {
-    // Top-level fields required by the Zod schema in x402-fetch
-    resource: resourceUrl,
-    description: `Access to the "${subscription.name}" subscription.`,
-    mimeType: 'application/json',
-    
-    // The 'accepts' array containing the on-chain details
     accepts: [{
       scheme: 'exact',
       network: 'polygon-amoy',
       asset: subscription.currency.toLowerCase(),
       payTo: subscription.creator.smartAccountAddress,
-      maxAmountRequired: amountInSmallestUnit.toString(),
+      maxAmountRequired: subscription.price.toString(),
       maxTimeoutSeconds: 300,
       extra: {
         name: subscription.name,
