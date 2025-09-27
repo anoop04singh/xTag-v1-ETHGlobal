@@ -43,44 +43,54 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       maxAmountRequired: amountInSmallestUnit.toString(),
       maxTimeoutSeconds: 300,
       asset: process.env.USDC_CONTRACT_ADDRESS,
-      extra: {
-        name: "USD Coin",
-        version: "2"
-      }
+      extra: { name: "USD Coin", version: "2" }
     }]
   };
 
   if (paymentHeader) {
-    console.log("[ACCESS LIB] X-PAYMENT header found. Verifying with facilitator...");
+    console.log("[ACCESS LIB] X-PAYMENT header found. Attempting to verify and settle...");
     try {
-      const decodedPayload = Buffer.from(paymentHeader, 'base64').toString('utf-8');
-      const paymentPayload = JSON.parse(decodedPayload);
+      const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
+      const facilitatorUrl = process.env.X402_FACILITATOR_URL;
 
-      const facilitatorUrl = `${process.env.X402_FACILITATOR_URL}/verify`;
-      const verificationResponse = await fetch(facilitatorUrl, {
+      // Step 1: Verify the payment payload
+      console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
+      const verifyRes = await fetch(`${facilitatorUrl}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           x402Version: 1,
-          paymentPayload: paymentPayload, // FIX: Send the decoded payload object
+          paymentPayload: decodedPayload,
           paymentRequirements: paymentRequirements.accepts[0],
         }),
       });
+      const verifyResult = await verifyRes.json();
 
-      if (!verificationResponse.ok) {
-          const errorText = await verificationResponse.text();
-          console.error(`[ACCESS LIB] Facilitator returned an error: ${verificationResponse.status} ${errorText}`);
+      if (!verifyRes.ok || !verifyResult.isValid) {
+        console.log("[ACCESS LIB] Facilitator verification failed:", verifyResult.invalidReason || 'Verification returned not OK.');
       } else {
-        const verificationResult = await verificationResponse.json();
-        if (verificationResult.isValid) {
-          console.log("[ACCESS LIB] Facilitator verification successful. Granting access.");
-          return { access: true, prompt: subscription.prompt };
+        console.log("[ACCESS LIB] Verification successful. Calling facilitator /settle endpoint...");
+        // Step 2: Settle the payment
+        const settleRes = await fetch(`${facilitatorUrl}/settle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            x402Version: 1,
+            paymentPayload: decodedPayload,
+            paymentRequirements: paymentRequirements.accepts[0],
+          }),
+        });
+        const settleResult = await settleRes.json();
+
+        if (settleRes.ok && settleResult.success) {
+          console.log(`[ACCESS LIB] Settlement successful. TxHash: ${settleResult.txHash}. Granting access.`);
+          return { access: true, prompt: subscription.prompt, txHash: settleResult.txHash };
         } else {
-          console.log("[ACCESS LIB] Facilitator verification failed:", verificationResult.invalidReason || 'Unknown reason');
+          console.error("[ACCESS LIB] Facilitator settlement failed:", settleResult.error || 'Settlement returned not OK.');
         }
       }
     } catch (error) {
-        console.error("[ACCESS LIB] Error contacting or parsing response from facilitator:", error);
+      console.error("[ACCESS LIB] Error during facilitator communication:", error);
     }
   }
 

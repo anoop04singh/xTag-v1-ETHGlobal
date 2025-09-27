@@ -17,7 +17,11 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 
     if (result.access) {
       console.log(`[ACCESS API] Access GRANTED for user ${user.id} to subscription ${subscriptionId}.`);
-      return NextResponse.json({ prompt: result.prompt });
+      const headers = new Headers();
+      if (result.txHash) {
+        headers.set('X-PAYMENT-RESPONSE', Buffer.from(JSON.stringify({ txHash: result.txHash })).toString('base64'));
+      }
+      return new Response(JSON.stringify({ prompt: result.prompt }), { status: 200, headers });
     } else if (result.status === 402) {
       console.log(`[ACCESS API] Access DENIED. Returning 402 Payment Required.`);
       return new Response(JSON.stringify(result.paymentRequirements), {
