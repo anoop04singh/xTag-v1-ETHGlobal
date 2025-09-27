@@ -4,59 +4,48 @@ import { getCurrentUser } from '@/lib/currentUser';
 import { getChatResponse, getTitleForConversation } from '@/lib/gemini';
 import { makePaidRequest } from '@/lib/x402';
 
-async function getSubscriptionContext(userId: string): Promise<string> {
+async function getSubscriptionContext(): Promise<string> {
     const allSubscriptions = await prisma.subscription.findMany({
-        include: { creator: true }
+        select: { name: true, description: true }
     });
-    const userPurchases = await prisma.purchase.findMany({
-        where: { userId },
-        select: { subscriptionId: true }
-    });
-    const purchasedIds = new Set(userPurchases.map(p => p.subscriptionId));
 
     if (allSubscriptions.length === 0) {
         return "You are a helpful AI assistant.";
     }
 
     const subscriptionList = allSubscriptions.map(sub => {
-        const isOwned = purchasedIds.has(sub.id) || sub.creatorId === userId;
-        const status = isOwned ? "OWNED" : `NOT OWNED, Price: ${sub.price} ${sub.currency}`;
         return `---
 Subscription Name: "${sub.name}"
 Description: ${sub.description}
-Status: ${status}
 ---`;
     }).join('\n\n');
 
-    return `You are an AI assistant. You have access to special paid "subscriptions" that can be executed with a command.
+    return `You are an AI assistant. You have access to special "subscriptions" that provide premium content or actions.
 
 Your primary role is to be a helpful conversational AI.
 
 Regarding subscriptions:
-- You MUST NOT attempt to run or purchase subscriptions yourself.
 - If a user asks about a subscription or how to use it, you MUST inform them to use the command: run "subscription name".
+- You do not have information about prices or whether the user owns a subscription. Do not guess. The system handles all payments automatically when the user runs the command.
 - For example, if they ask "How do I get the tech news?", you should reply: "You can get the tech news by running the command: run "Daily Tech News"".
 
-This is the complete list of available subscriptions for your reference:
+This is a list of available subscriptions for your reference:
 ${subscriptionList}`;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const authHeader = request.headers.get('Authorization');
     const userToken = authHeader?.split(' ')[1];
-    if (!userToken) {
-        return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
-    }
+    if (!userToken) return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
 
     const { conversationId, message } = await request.json();
     if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
 
+    // --- Command Handling ---
     const runMatch = message.match(/run\s+"([^"]+)"/i);
     if (runMatch) {
         const subName = runMatch[1];
@@ -70,19 +59,12 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-            // This is the transactional part. It attempts to access the resource.
-            // If payment is required, makePaidRequest will handle the entire on-chain x402 flow.
-            // If the user's wallet has insufficient funds, it will throw an error here.
             const { data, txHash } = await makePaidRequest(user.id, `/api/subscriptions/${subscription.id}/access`, userToken);
             
             const purchase = await prisma.purchase.findUnique({ where: { userId_subscriptionId: { userId: user.id, subscriptionId: subscription.id } } });
-
             let wasNewPurchase = false;
-            // The presence of a txHash is cryptographic proof of a new, successful on-chain transaction.
             if (!purchase && txHash) {
-                await prisma.purchase.create({
-                    data: { userId: user.id, subscriptionId: subscription.id, txHash }
-                });
+                await prisma.purchase.create({ data: { userId: user.id, subscriptionId: subscription.id, txHash } });
                 wasNewPurchase = true;
             }
 
@@ -130,7 +112,7 @@ export async function POST(request: NextRequest) {
     if (!updatedConversation) return NextResponse.json({ error: 'Could not retrieve conversation' }, { status: 500 });
 
     const history = updatedConversation.messages.slice(0, -1).map(msg => ({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] }));
-    const systemInstruction = await getSubscriptionContext(user.id);
+    const systemInstruction = await getSubscriptionContext();
     const aiResponseContent = await getChatResponse(history, message, systemInstruction);
 
     const assistantMessage = await prisma.message.create({ data: { role: 'assistant', content: aiResponseContent, conversationId: conversation.id } });
