@@ -53,12 +53,12 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
       const facilitatorUrl = 'https://x402.polygon.technology';
 
-      // FIX: Ensure x402Version is present and is a number (u8).
+      // ✅ Always enforce numeric x402Version (u8 expected by facilitator).
       const payloadWithVersion = {
         ...decodedPayload,
-        x402Version: decodedPayload.x402Version || 1,
+        x402Version: typeof decodedPayload.x402Version === 'number' ? decodedPayload.x402Version : 1,
       };
-      console.log("[ACCESS LIB] Ensured x402Version is present in payload as a number.");
+      console.log("[ACCESS LIB] Ensured x402Version is present in payload as numeric 1.");
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
@@ -66,11 +66,11 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paymentPayload: payloadWithVersion, 
+          paymentPayload: payloadWithVersion,
           paymentRequirements: paymentRequirements.accepts[0],
         }),
       });
-      
+
       if (!verifyRes.ok) {
         const errorText = await verifyRes.text();
         console.error(`[ACCESS LIB] Facilitator /verify returned an error: ${verifyRes.status} ${errorText}`);
