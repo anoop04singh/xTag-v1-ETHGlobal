@@ -8,7 +8,7 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
+  model: "gemini-1.5-flash",
 });
 
 const generationConfig = {
@@ -40,6 +40,11 @@ const safetySettings = [
 
 export async function getChatResponse(history: Content[], newMessage: string, systemInstruction?: string): Promise<string> {
   try {
+    if (typeof newMessage !== 'string' || !newMessage.trim()) {
+      console.error("Gemini Error: newMessage is not a valid string. Value received:", newMessage);
+      throw new Error("Invalid message content provided to AI model. The prompt may be empty.");
+    }
+
     const contents: Content[] = [
         ...history, 
         { role: 'user', parts: [{ text: newMessage }] }
@@ -55,6 +60,9 @@ export async function getChatResponse(history: Content[], newMessage: string, sy
     return result.response.text();
   } catch (error) {
     console.error("Error getting response from Gemini:", error);
+    if (error instanceof Error && error.message.includes("Invalid message content")) {
+        throw error;
+    }
     throw new Error("Failed to get response from AI model.");
   }
 }
