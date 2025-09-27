@@ -43,6 +43,11 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       maxAmountRequired: amountInSmallestUnit.toString(),
       maxTimeoutSeconds: 300,
       asset: process.env.USDC_CONTRACT_ADDRESS,
+      // FIX: Added the required 'extra' field for the 'exact' scheme.
+      extra: {
+        name: "USD Coin",
+        version: "2"
+      }
     }]
   };
 
@@ -60,16 +65,22 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
         }),
       });
 
-      const verificationResult = await verificationResponse.json();
-
-      if (verificationResponse.ok && verificationResult.isValid) {
-        console.log("[ACCESS LIB] Facilitator verification successful. Granting access.");
-        return { access: true, prompt: subscription.prompt };
+      // FIX: Added robust error handling for non-JSON responses.
+      if (!verificationResponse.ok) {
+          const errorText = await verificationResponse.text();
+          console.error(`[ACCESS LIB] Facilitator returned an error: ${verificationResponse.status} ${errorText}`);
+          // Fall through to return 402, as verification failed.
       } else {
-        console.log("[ACCESS LIB] Facilitator verification failed:", verificationResult.invalidReason || 'Unknown reason');
+        const verificationResult = await verificationResponse.json();
+        if (verificationResult.isValid) {
+          console.log("[ACCESS LIB] Facilitator verification successful. Granting access.");
+          return { access: true, prompt: subscription.prompt };
+        } else {
+          console.log("[ACCESS LIB] Facilitator verification failed:", verificationResult.invalidReason || 'Unknown reason');
+        }
       }
     } catch (error) {
-        console.error("[ACCESS LIB] Error contacting facilitator:", error);
+        console.error("[ACCESS LIB] Error contacting or parsing response from facilitator:", error);
     }
   }
 
