@@ -68,3 +68,5 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
         busy={busy}
       />
     </div>
+  )
+}
