@@ -31,7 +31,7 @@ export default function Sidebar({
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
 }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   if (sidebarCollapsed) {
     return (
@@ -179,13 +179,16 @@ export default function Sidebar({
               </SidebarSection>
             </nav>
 
-            <div className="mt-auto border-t border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
+            <div className="mt-auto border-t border-zinc-200/60 dark:border-zinc-800">
+              {user && <WalletInfo />}
+              <div className="flex items-center gap-2 px-3 py-3">
+                <button onClick={logout} className="text-xs text-zinc-500 hover:underline dark:text-zinc-400">
+                  Log out
+                </button>
                 <div className="ml-auto">
                   <ThemeToggle theme={theme} setTheme={setTheme} />
                 </div>
               </div>
-              {user && <WalletInfo />}
             </div>
           </motion.aside>
         )}

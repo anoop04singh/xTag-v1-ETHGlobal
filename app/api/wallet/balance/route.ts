@@ -58,8 +58,9 @@ export async function GET(request: NextRequest) {
     const usdcBalance = formatUnits(usdcBalanceBigInt, usdcDecimals);
 
     return NextResponse.json({
-      matic: parseFloat(maticBalance).toFixed(4),
-      usdc: parseFloat(usdcBalance).toFixed(2),
+      walletAddress: user.walletAddress,
+      maticBalance: parseFloat(maticBalance).toFixed(4),
+      usdcBalance: parseFloat(usdcBalance).toFixed(2),
     });
 
   } catch (error) {
