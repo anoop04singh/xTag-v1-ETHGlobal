@@ -35,7 +35,7 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
             <div className="text-center">
-              <div className="h-16 w-16 mb-4">
+              <div className="h-16 w-16 mb-4 mx-auto">
                 <img src="/XtagLogoBK.png" alt="xTag Logo" className="h-16 w-16 dark:hidden" />
                 <img src="/XtagLogoWh.png" alt="xTag Logo" className="h-16 w-16 hidden dark:block" />
               </div>
