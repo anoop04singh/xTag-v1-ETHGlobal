@@ -52,10 +52,12 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
     try {
       const facilitatorUrl = 'https://facilitator.x402.rs';
 
-      // FIX: Send the original base64 header directly to the facilitator.
+      // FIX: Decode the header and use it directly as the paymentPayload.
+      // This assumes the client is sending a fully compliant object.
+      const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
+
       const finalBodyForFacilitator = {
-        x402Version: 1,
-        paymentHeader: paymentHeader,
+        paymentPayload: decodedPayload,
         paymentRequirements: paymentRequirements.accepts[0],
       };
       console.log("[ACCESS LIB] Final body prepared for facilitator:", JSON.stringify(finalBodyForFacilitator));
@@ -71,6 +73,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       if (!verifyRes.ok) {
         const errorText = await verifyRes.text();
         console.error(`[ACCESS LIB] Facilitator /verify returned an error: ${verifyRes.status} ${errorText}`);
+        // Fall through to return 402
       } else {
         const verifyResult = await verifyRes.json();
         if (!verifyResult.isValid) {
