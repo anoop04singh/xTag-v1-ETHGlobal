@@ -50,7 +50,6 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
 
   if (paymentHeader) {
     console.log("[ACCESS LIB] X-PAYMENT header found. Attempting to verify and settle...");
-    console.log("[ACCESS LIB] Header value (first 50 chars):", paymentHeader.substring(0, 50));
     try {
       const facilitatorUrl = 'https://x402.polygon.technology';
       console.log(`[ACCESS LIB] Using facilitator: ${facilitatorUrl}`);
@@ -58,7 +57,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       const finalBodyForFacilitator = {
         x402Version: 1,
         paymentHeader: paymentHeader,
-        paymentRequirements: paymentRequirements.accepts[0],
+        paymentPayload: paymentRequirements.accepts[0], // Corrected key from paymentRequirements to paymentPayload
       };
       console.log("[ACCESS LIB] Body prepared for facilitator:", JSON.stringify(finalBodyForFacilitator, null, 2));
 
