@@ -26,8 +26,27 @@ export async function POST(request: NextRequest) {
 
     const api = withPaymentInterceptor(axios.create({ baseURL: PAID_RESOURCE_BASE_URL }), account);
 
-    console.log(`[TEST PAYMENT API] Making paid request to ${PAID_RESOURCE_BASE_URL}${PAID_RESOURCE_PATH}`);
-    const response = await api.get(PAID_RESOURCE_PATH);
+    let response;
+    const retries = 2;
+    const delay = 1000;
+
+    for (let i = 0; i <= retries; i++) {
+      try {
+        console.log(`[TEST PAYMENT API] Making paid request, attempt ${i + 1}/${retries + 1}`);
+        response = await api.get(PAID_RESOURCE_PATH);
+        break; // Success, exit loop
+      } catch (error: any) {
+        console.error(`[TEST PAYMENT API] Attempt ${i + 1} failed:`, error.response?.data || error.message);
+        if (i === retries) {
+          throw error; // Last attempt, re-throw to be caught by outer catch block
+        }
+        await new Promise(res => setTimeout(res, delay * (i + 1))); // Wait with increasing delay
+      }
+    }
+
+    if (!response) {
+        throw new Error("Request failed after all retries but no response was received.");
+    }
     
     const paymentResponse = response.headers['x-payment-response'] 
         ? decodeXPaymentResponse(response.headers['x-payment-response'])
@@ -41,8 +60,22 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("[TEST PAYMENT API] Paid request failed:", error.response?.data || error.message);
+    
+    let detailedError = "Paid request failed. This could be due to insufficient funds or a temporary network issue.";
+    if (error.response?.data?.message) {
+        detailedError = error.response.data.message;
+    } else if (error.message) {
+        if (error.message.includes('nonce')) {
+            detailedError = "Transaction failed due to a nonce issue. Please try again.";
+        } else if (error.message.includes('insufficient funds')) {
+            detailedError = "Transaction failed: Insufficient funds for gas.";
+        } else if (error.message.includes('timeout')) {
+            detailedError = "The request timed out, possibly due to network congestion. Please try again.";
+        }
+    }
+
     return NextResponse.json(
-        { error: 'Paid request failed', details: error.response?.data || error.message }, 
+        { error: 'Paid request failed', details: detailedError }, 
         { status: 500 }
     );
   }
