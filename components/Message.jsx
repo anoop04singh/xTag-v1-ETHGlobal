@@ -1,6 +1,7 @@
 import { cls } from "./utils"
+import ActionConfirmation from "./ActionConfirmation";
 
-export default function Message({ role, children }) {
+export default function Message({ role, children, actionCommand, onActionConfirm }) {
   const isUser = role === "user"
   return (
     <div className={cls("flex gap-3", isUser ? "justify-end" : "justify-start")}>
@@ -18,6 +19,9 @@ export default function Message({ role, children }) {
         )}
       >
         {children}
+        {actionCommand && role === 'assistant' && (
+          <ActionConfirmation command={actionCommand} onConfirm={onActionConfirm} />
+        )}
       </div>
       {isUser && (
         <div className="mt-0.5 grid h-7 w-7 place-items-center rounded-full bg-zinc-900 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">

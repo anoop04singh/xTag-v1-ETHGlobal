@@ -41,19 +41,36 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">How can I help you today?</h2>
               <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                Try commands like <code className="font-mono bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-0.5">run "nft-metadata"</code> or <code className="font-mono bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-0.5">run "trading-signals"</code> to test the payment flow.
+                Try asking for "trading signals" or "NFT info" to see the new smart agent in action.
               </p>
             </div>
           </div>
         ) : (
           <>
-            {messages.map((m) => (
-              <div key={m.id} className="space-y-2">
-                <Message role={m.role}>
-                  <div className="whitespace-pre-wrap">{m.content}</div>
-                </Message>
-              </div>
-            ))}
+            {messages.map((m) => {
+              const actionRegex = /\[DYAD_ACTION:(.+)\]/;
+              const match = m.content.match(actionRegex);
+              
+              let cleanContent = m.content;
+              let actionCommand = null;
+
+              if (match && m.role === 'assistant') {
+                cleanContent = m.content.replace(actionRegex, "").trim();
+                actionCommand = match[1];
+              }
+
+              return (
+                <div key={m.id} className="space-y-2">
+                  <Message 
+                    role={m.role}
+                    actionCommand={actionCommand}
+                    onActionConfirm={onSend}
+                  >
+                    <div className="whitespace-pre-wrap">{cleanContent}</div>
+                  </Message>
+                </div>
+              )
+            })}
             {isThinking && <ThinkingMessage onPause={onPauseThinking} />}
           </>
         )}
