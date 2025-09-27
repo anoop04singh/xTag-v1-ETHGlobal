@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { withPaymentInterceptor } from 'x402-axios';
 import { privateKeyToAccount } from 'viem/accounts';
-import { polygonAmoy } from "viem/chains";
 import { decrypt } from './encryption';
 import { prisma } from './db';
-import { createWalletClient, http } from 'viem';
 
 export async function makePaidRequest(userId: string, relativeUrl: string, userToken: string) {
   const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}${relativeUrl}`;
@@ -17,21 +15,11 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   const account = privateKeyToAccount(privateKey as `0x${string}`);
   console.log(`[x402-axios] Decrypted private key for wallet: ${account.address}`);
 
-  const walletClient = createWalletClient({
-    account,
-    chain: polygonAmoy,
-    transport: http(process.env.POLYGON_AMOY_RPC_URL!),
-  });
-  console.log(`[x402-axios] Viem WalletClient created for address: ${walletClient.account.address}`);
-
-  const facilitatorUrl = 'https://x402.polygon.technology';
-  
   const axiosInstance = axios.create();
-  const axiosWithPayment = withPaymentInterceptor(axiosInstance, walletClient, {
-    facilitatorUrl: facilitatorUrl,
-    paymentRequirementsSelector: (response) => response.data.accepts[0],
-  });
-  console.log(`[x402-axios] Axios wrapped with WalletClient and facilitator: ${facilitatorUrl}`);
+  
+  // Corrected the function call to match the provided example (2 arguments only)
+  const axiosWithPayment = withPaymentInterceptor(axiosInstance, account);
+  console.log(`[x402-axios] Axios wrapped with payment interceptor.`);
 
   try {
     console.log(`[x402-axios] Making initial request to ${fullUrl}`);
@@ -61,6 +49,9 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
     return { data, txHash };
   } catch (error) {
     console.error('[x402-axios] CRITICAL ERROR during makePaidRequest:', error);
+    if (axios.isAxiosError(error) && error.response) {
+        console.error('[x402-axios] Axios error response data:', error.response.data);
+    }
     throw error;
   }
 }
