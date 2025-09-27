@@ -1,8 +1,7 @@
 "use client"
 
 import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from "react"
-import { Send, Loader2, Plus, Mic } from "lucide-react"
-import ComposerActionsPopover from "./ComposerActionsPopover"
+import { Send, Loader2 } from "lucide-react"
 import { cls } from "./utils"
 
 const Composer = forwardRef(function Composer({ onSend, busy }, ref) {
@@ -70,8 +69,6 @@ const Composer = forwardRef(function Composer({ onSend, busy }, ref) {
     }
   }
 
-  const hasContent = value.length > 0
-
   return (
     <div className="border-t border-zinc-200/60 p-4 dark:border-zinc-800">
       <div
@@ -106,23 +103,8 @@ const Composer = forwardRef(function Composer({ onSend, busy }, ref) {
           />
         </div>
 
-        <div className="flex items-center justify-between mt-2">
-          <ComposerActionsPopover>
-            <button
-              className="inline-flex shrink-0 items-center justify-center rounded-full p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
-              title="Add attachment"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </ComposerActionsPopover>
-
+        <div className="flex items-center justify-end mt-2">
           <div className="flex items-center gap-1 shrink-0">
-            <button
-              className="inline-flex items-center justify-center rounded-full p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
-              title="Voice input"
-            >
-              <Mic className="h-4 w-4" />
-            </button>
             <button
               onClick={handleSend}
               disabled={sending || busy || !value.trim()}
