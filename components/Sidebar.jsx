@@ -23,6 +23,7 @@ import CreateFolderModal from "./CreateFolderModal"
 import CreateTemplateModal from "./CreateTemplateModal"
 import SearchModal from "./SearchModal"
 import SettingsPopover from "./SettingsPopover"
+import WalletInfo from "./WalletInfo"
 import { cls } from "./utils"
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
@@ -399,6 +400,8 @@ export default function Sidebar({
                 </div>
               </SidebarSection>
             </nav>
+
+            <WalletInfo />
 
             <div className="mt-auto border-t border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
               <div className="flex items-center gap-2">
