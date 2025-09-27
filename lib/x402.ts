@@ -24,17 +24,13 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
     transport: http(process.env.POLYGON_AMOY_RPC_URL!),
   });
 
-  // 2. Create the Biconomy Smart Account client
-  // The signer MUST be a WalletClient, not just an Account object.
+  // 2. Create the Biconomy Smart Account client without the Paymaster
   const config: SmartAccountClientOptions = {
     signer: eoaWalletClient,
     bundlerUrl: process.env.BICONOMY_BUNDLER_URL!,
     rpcUrl: process.env.POLYGON_AMOY_RPC_URL!,
     chainId: polygonAmoy.id,
   };
-  if (process.env.BICONOMY_PAYMASTER_API_KEY) {
-    config.biconomyPaymasterApiKey = process.env.BICONOMY_PAYMASTER_API_KEY;
-  }
   const biconomySmartAccount = await createSmartAccountClient(config);
   console.log(`[x402] Biconomy client created for smart wallet: ${biconomySmartAccount.account.address}`);
 
@@ -46,7 +42,7 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
       type: 'local' as const,
     },
     chain: polygonAmoy,
-    // Use the Biconomy client for sending transactions to enable gas sponsorship
+    // Use the Biconomy client for sending transactions
     sendTransaction: biconomySmartAccount.sendTransaction.bind(biconomySmartAccount),
     // Use the standard EOA client for signing, as the owner's signature is what's needed for EIP-1271 validation
     signTypedData: eoaWalletClient.signTypedData.bind(eoaWalletClient),

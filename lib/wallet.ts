@@ -16,26 +16,18 @@ export async function createSmartAccount() {
   const signer = privateKeyToAccount(signerPrivateKey);
   console.log("[WALLET] New signer generated.");
 
-  // 2. Create the Biconomy Smart Account config
+  // 2. Create the Biconomy Smart Account config without the Paymaster
   const config: SmartAccountClientOptions = {
     signer,
     bundlerUrl: process.env.BICONOMY_BUNDLER_URL,
     rpcUrl: process.env.POLYGON_AMOY_RPC_URL,
     chainId: polygonAmoy.id,
   };
-
-  // Only add the paymaster API key if it exists in the .env file
-  if (process.env.BICONOMY_PAYMASTER_API_KEY) {
-    config.biconomyPaymasterApiKey = process.env.BICONOMY_PAYMASTER_API_KEY;
-    console.log("[WALLET] Biconomy Paymaster API key found and included.");
-  } else {
-    console.log("[WALLET] Biconomy Paymaster API key not found. Gas fees will not be sponsored.");
-  }
+  console.log("[WALLET] Biconomy Paymaster is disabled. Gas fees will be paid by the smart wallet.");
 
   console.log("[WALLET] Creating Biconomy smart account client with config:", {
     ...config,
     signer: 'Private key hidden',
-    biconomyPaymasterApiKey: config.biconomyPaymasterApiKey ? 'Exists' : 'Not set'
   });
 
   const biconomySmartAccount = await createSmartAccountClient(config);

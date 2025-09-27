@@ -52,8 +52,8 @@ This is the core transactional flow of the application.
 5.  **On-Chain Transaction**:
     a. The `x402-fetch` library, wrapped in `makePaidRequest`, catches the `402` response.
     b. It queries the database for the user's `encryptedSignerKey`, decrypts it, and initializes a Viem account object.
-    c. It constructs and sends the USDC transfer transaction to the Polygon Amoy network via the Biconomy bundler.
-    d. **Failure Point**: If the user's smart wallet has insufficient USDC, the transaction fails, and `makePaidRequest` throws an error, which is caught by the chat API and relayed to the user.
+    c. It constructs and sends the USDC transfer transaction to the Polygon Amoy network via the Biconomy bundler. The user's smart wallet must be funded with MATIC to cover the gas fees for this transaction.
+    d. **Failure Point**: If the user's smart wallet has insufficient USDC for the payment or insufficient MATIC for gas, the transaction fails, and `makePaidRequest` throws an error, which is caught by the chat API and relayed to the user.
 6.  **Confirmation & Access**:
     a. The on-chain transaction is confirmed. The facilitator provides proof of payment.
     b. `x402-fetch` automatically retries the internal request, now with the payment proof.
