@@ -18,6 +18,39 @@ async function getAIContext(): Promise<string> {
 - Do not make up other commands. These are the only ones.`;
 }
 
+function formatApiResponse(command: string, data: any): string {
+    let formattedContent = `✅ **Successfully fetched data from "${command}"**\n\n`;
+
+    switch (command) {
+        case 'get-data':
+            formattedContent += `Here is the sample data you requested:\n- **Message:** ${data.message}\n- **Timestamp:** ${new Date(data.timestamp).toLocaleString()}`;
+            break;
+        case 'nft-metadata':
+            formattedContent += `**NFT Details:**\n- **Name:** ${data.name}\n- **Description:** ${data.description}\n- **Image:** [View Image](${data.image})\n`;
+            if (data.attributes && data.attributes.length > 0) {
+                formattedContent += `- **Attributes:**\n`;
+                data.attributes.forEach((attr: any) => {
+                    formattedContent += `  - *${attr.trait_type}:* ${attr.value}\n`;
+                });
+            }
+            break;
+        case 'trading-signals':
+            formattedContent += `**Latest Trading Signals:**\n`;
+            data.signals.forEach((signal: any) => {
+                const emoji = signal.signal === 'BUY' ? '🟢' : signal.signal === 'SELL' ? '🔴' : '⚪️';
+                formattedContent += `- ${emoji} **${signal.pair}**: ${signal.signal} at ${signal.price} (Confidence: ${signal.confidence})\n`;
+            });
+            break;
+        case 'documentation':
+            formattedContent += `**Documentation Found:**\n- **Topic:** ${data.topic}\n- **Version:** ${data.version}\n\n---\n\n${data.content}`;
+            break;
+        default:
+            formattedContent += `\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
+            break;
+    }
+    return formattedContent;
+}
+
 async function handlePaidRequest(userId: string, command: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -41,11 +74,12 @@ async function handlePaidRequest(userId: string, command: string) {
                 ? decodeXPaymentResponse(response.headers['x-payment-response'])
                 : null;
 
-            let content = `Successfully fetched data from "${command}":\n\n\`\`\`json\n${JSON.stringify(response.data, null, 2)}\n\`\`\``;
+            let content = formatApiResponse(command, response.data);
+
             if (paymentResponse) {
-                content += `\n\n**Payment Details:**\nTransaction Hash: \`${paymentResponse.transaction}\``;
+                content += `\n\n---\n**Payment Details:**\n*Transaction Hash:* \`${paymentResponse.transaction}\``;
             } else {
-                content += `\n\n(Access was granted without a new payment, you may already have access).`;
+                content += `\n\n*(Access was granted without a new payment, you may already have access).*`;
             }
             return content; // Success
 

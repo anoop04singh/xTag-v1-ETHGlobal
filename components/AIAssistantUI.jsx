@@ -6,6 +6,7 @@ import Header from "./Header"
 import ChatPane from "./ChatPane"
 import ThemeToggle from "./ThemeToggle"
 import { useAuth } from "../context/AuthContext"
+import ExplorePane from "./ExplorePane"
 
 export default function AIAssistantUI() {
   const { token } = useAuth();
@@ -31,6 +32,7 @@ export default function AIAssistantUI() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [messages, setMessages] = useState([])
   const [isThinking, setIsThinking] = useState(false)
+  const [view, setView] = useState('chat');
 
   async function sendMessage(content) {
     if (!content.trim() || !token) return;
@@ -88,13 +90,22 @@ export default function AIAssistantUI() {
         />
 
         <main className="relative flex min-w-0 flex-1 flex-col">
-          <Header sidebarCollapsed={sidebarCollapsed} setSidebarOpen={setSidebarOpen} />
-          <ChatPane
-            messages={messages}
-            onSend={sendMessage}
-            isThinking={isThinking}
-            onPauseThinking={() => setIsThinking(false)}
+          <Header 
+            sidebarCollapsed={sidebarCollapsed} 
+            setSidebarOpen={setSidebarOpen}
+            view={view}
+            setView={setView}
           />
+          {view === 'chat' ? (
+            <ChatPane
+              messages={messages}
+              onSend={sendMessage}
+              isThinking={isThinking}
+              onPauseThinking={() => setIsThinking(false)}
+            />
+          ) : (
+            <ExplorePane />
+          )}
         </main>
       </div>
     </div>
