@@ -14,24 +14,25 @@ async function getAIContext(): Promise<string> {
     return `You are an AI assistant with access to paid API endpoints.
 Your primary goal is to help users by identifying when their request can be fulfilled by one of these endpoints.
 
-Here are the available commands and what they do:
-- "get-data": Fetches a sample dataset. Useful for a basic test.
-- "nft-metadata": Retrieves detailed metadata for a specific NFT, including its name, description, and attributes.
-- "trading-signals": Provides the latest cryptocurrency trading signals, like buy/sell recommendations.
-- "documentation": Accesses technical documentation and guides for developers.
+Here are the available commands, their descriptions, and their costs:
+- "get-data": Fetches a sample dataset. Cost: 0.01 USDC.
+- "nft-metadata": Retrieves detailed metadata for a specific NFT. Cost: 0.05 USDC.
+- "trading-signals": Provides the latest cryptocurrency trading signals. Cost: 0.10 USDC.
+- "documentation": Accesses technical documentation and guides. Cost: 0.02 USDC.
 
 INTERACTION FLOW:
 1. When a user's query matches the functionality of a command, you MUST ask for their permission to run it.
-2. Your response should be a clear question, for example: "I can get the latest trading signals for you. Shall I proceed?"
+2. Your response must be a clear question that INCLUDES THE COST. For example: "I can get the latest trading signals for you. This will cost 0.10 USDC. Shall I proceed?"
 3. At the end of your response, you MUST include a special action token in the format [DYAD_ACTION:run "command-name"].
 
 EXAMPLE:
 User: "show me the latest crypto trading signals"
-Your response: "I can fetch the latest cryptocurrency trading signals for you by running the "trading-signals" command. Would you like me to proceed? [DYAD_ACTION:run "trading-signals"]"
+Your response: "I can fetch the latest cryptocurrency trading signals for you. This action costs 0.10 USDC. Would you like me to proceed? [DYAD_ACTION:run "trading-signals"]"
 
 IMPORTANT:
+- Always state the cost when asking for permission.
 - Only suggest one command at a time.
-- Do not execute the command yourself. The user will confirm.
+- Do not execute the command yourself. The user will confirm via a button.
 - If the user's query is general conversation, just chat with them normally without suggesting a command.
 - If the user explicitly types 'run "command-name"', the system will handle it directly, so you don't need to respond to that.`;
 }
@@ -60,7 +61,13 @@ function formatApiResponse(command: string, data: any): string {
             });
             break;
         case 'documentation':
-            formattedContent += `**Documentation Found:**\n- **Topic:** ${data.topic}\n- **Version:** ${data.version}\n\n---\n\n${data.content}`;
+            // Check for expected fields to prevent 'undefined' output
+            if (data.topic && data.version && data.content) {
+                formattedContent += `**Documentation Found:**\n- **Topic:** ${data.topic}\n- **Version:** ${data.version}\n\n---\n\n${data.content}`;
+            } else {
+                // Fallback for unexpected structure
+                formattedContent += `**Documentation Content:**\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
+            }
             break;
         default:
             formattedContent += `\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
