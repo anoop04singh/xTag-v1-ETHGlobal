@@ -17,7 +17,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'nfcId is required' }, { status: 400 });
     }
 
-    // --- [NEW] Check for test mapping first ---
     const testMapping = await prisma.nfcTestMapping.findUnique({
       where: { nfcId },
     });
@@ -54,27 +53,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Login successful via test mapping', token, isNewUser });
     }
     
-    // --- [FALLBACK] Original logic ---
-    console.log(`[NFC AUTH API] No test mapping found. Proceeding with standard flow.`);
-    let user = await prisma.user.findUnique({
-      where: { nfcId },
-    });
-
-    if (user) {
-      console.log(`[NFC AUTH API] Existing user found: ${user.id}. Generating login token.`);
-      const token = createToken({ id: user.id, walletAddress: user.walletAddress });
-      console.log("[NFC AUTH API] Login successful.");
-      return NextResponse.json({ message: 'Login successful', token, isNewUser: false });
-    }
-
-    console.log('[NFC AUTH API] New user detected. Starting signup process...');
+    // If no mapping exists, it's a new user. Create wallet, save mapping, then create user.
+    console.log('[NFC AUTH API] No mapping found. Starting new user signup process...');
     const { signerPrivateKey, walletAddress } = await createWallet();
     
-    console.log(`[NFC AUTH API] Encrypting private key for storage...`);
+    console.log(`[NFC AUTH API] Saving new NFC ID and private key to the mapping table...`);
+    await prisma.nfcTestMapping.create({
+      data: {
+        nfcId,
+        privateKey: signerPrivateKey,
+      },
+    });
+
+    console.log(`[NFC AUTH API] Encrypting private key for user record...`);
     const encryptedSignerKey = encrypt(signerPrivateKey);
 
     console.log(`[NFC AUTH API] Creating new user record in database...`);
-    user = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         nfcId,
         walletAddress,
@@ -87,7 +82,7 @@ export async function POST(request: Request) {
     console.log("[NFC AUTH API] Signup successful, token generated.");
 
     return NextResponse.json({
-      message: 'Signup successful, wallet created',
+      message: 'Signup successful, wallet and mapping created',
       token,
       walletAddress,
       isNewUser: true,
@@ -95,6 +90,10 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('[NFC AUTH API] CRITICAL ERROR:', error);
+    // Handle potential unique constraint violation if two requests come at once
+    if (error.code === 'P2002' && error.meta?.target?.includes('nfcId')) {
+        return NextResponse.json({ error: 'This NFC ID was just registered. Please try again.' }, { status: 409 });
+    }
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
   }
 }
