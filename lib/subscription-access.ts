@@ -50,7 +50,8 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
   if (paymentHeader) {
     console.log("[ACCESS LIB] X-PAYMENT header found. Attempting to verify and settle...");
     try {
-      const facilitatorUrl = process.env.X402_FACILITATOR_URL;
+      const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
+      const facilitatorUrl = 'https://facilitator.x402.rs'; // Use the new, correct facilitator URL
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
@@ -59,7 +60,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           x402Version: 1,
-          paymentHeader: paymentHeader, // FIX: Send the raw header string as 'paymentHeader'
+          paymentPayload: decodedPayload, // FIX: Send the decoded payload object as 'paymentPayload'
           paymentRequirements: paymentRequirements.accepts[0],
         }),
       });
@@ -79,7 +80,7 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               x402Version: 1,
-              paymentHeader: paymentHeader, // FIX: Send the raw header string here too
+              paymentPayload: decodedPayload, // FIX: Send the decoded payload object here too
               paymentRequirements: paymentRequirements.accepts[0],
             }),
           });
