@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { parseUnits } from 'viem';
+import crypto from 'crypto';
 
 export async function getSubscriptionAccess(userId: string, subscriptionId: string) {
   console.log(`[ACCESS LIB] Checking access for user ${userId} to subscription ${subscriptionId}`);
@@ -43,23 +44,18 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
   const resourceUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/subscriptions/${subscriptionId}/access`;
 
   const paymentRequirements = {
-    // Top-level fields required by the Zod schema in x402-fetch
-    resource: resourceUrl,
-    description: `Access to the "${subscription.name}" subscription.`,
-    mimeType: 'application/json',
-    
-    // The 'accepts' array containing the on-chain details
+    x402Version: 1,
+    error: null,
     accepts: [{
       scheme: 'exact',
       network: 'polygon-amoy',
-      asset: subscription.currency.toLowerCase(),
+      asset: process.env.USDC_CONTRACT_ADDRESS,
       payTo: subscription.creator.smartAccountAddress,
       maxAmountRequired: amountInSmallestUnit.toString(),
       maxTimeoutSeconds: 300,
-      extra: {
-        name: subscription.name,
-        description: subscription.description,
-      },
+      resource: resourceUrl,
+      description: `Payment for access to "${subscription.name}"`,
+      nonce: crypto.randomBytes(16).toString('hex')
     }],
   };
 
