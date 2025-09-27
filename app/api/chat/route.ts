@@ -42,7 +42,7 @@ async function handlePaidRequest(userId: string) {
 
             let content = `Successfully fetched data: ${JSON.stringify(response.data)}`;
             if (paymentResponse) {
-                content += `\n\nPayment Details:\nTransaction Hash: ${paymentResponse.txHash}`;
+                content += `\n\nPayment Details:\nTransaction Hash: ${paymentResponse.transaction}`;
             } else {
                 content += `\n\n(Access was granted without a new payment, you may already have access).`;
             }
