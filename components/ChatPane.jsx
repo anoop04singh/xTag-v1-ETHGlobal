@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Square } from "lucide-react"
+import { Square, Eye } from "lucide-react"
 import Message from "./Message"
 import Composer from "./Composer"
+import NftMetadataModal from "./NftMetadataModal"
+import { Button } from "./ui/button"
 
 function ThinkingMessage({ onPause }) {
   return (
@@ -28,9 +30,21 @@ function ThinkingMessage({ onPause }) {
 
 export default function ChatPane({ messages = [], onSend, isThinking, onPauseThinking }) {
   const [busy, setBusy] = useState(false)
+  const [nftModalOpen, setNftModalOpen] = useState(false);
+  const [nftModalData, setNftModalData] = useState([]);
+
+  const handleViewNftDetails = (data) => {
+    setNftModalData(data);
+    setNftModalOpen(true);
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <NftMetadataModal 
+        isOpen={nftModalOpen} 
+        onClose={() => setNftModalOpen(false)} 
+        data={nftModalData} 
+      />
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
@@ -49,14 +63,27 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
           <>
             {messages.map((m) => {
               const actionRegex = /\[DYAD_ACTION:(.+)\]/;
-              const match = m.content.match(actionRegex);
+              const nftRegex = /\[DYAD_NFT_DATA:(.+)\]/;
+              
+              const actionMatch = m.content.match(actionRegex);
+              const nftMatch = m.content.match(nftRegex);
               
               let cleanContent = m.content;
               let actionCommand = null;
+              let nftData = null;
 
-              if (match && m.role === 'assistant') {
+              if (actionMatch && m.role === 'assistant') {
                 cleanContent = m.content.replace(actionRegex, "").trim();
-                actionCommand = match[1];
+                actionCommand = actionMatch[1];
+              }
+              
+              if (nftMatch && m.role === 'assistant') {
+                cleanContent = m.content.replace(nftRegex, "").trim();
+                try {
+                  nftData = JSON.parse(nftMatch[1]);
+                } catch (e) {
+                  console.error("Failed to parse NFT JSON", e);
+                }
               }
 
               return (
@@ -68,6 +95,14 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
                   >
                     <div className="whitespace-pre-wrap">{cleanContent}</div>
                   </Message>
+                  {nftData && (
+                    <div className="flex justify-start pl-10">
+                       <Button variant="outline" size="sm" onClick={() => handleViewNftDetails(nftData)}>
+                         <Eye className="mr-2 h-4 w-4" />
+                         View NFT Details
+                       </Button>
+                    </div>
+                  )}
                 </div>
               )
             })}

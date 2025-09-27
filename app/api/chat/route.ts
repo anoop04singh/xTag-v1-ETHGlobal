@@ -58,33 +58,16 @@ IMPORTANT:
 }
 
 function formatApiResponse(command: string, data: any): string {
+    if (command === 'nft-metadata' && data.data && Array.isArray(data.data)) {
+        const count = data.data.length;
+        return `✅ I found details for ${count} NFT(s). You can view them now. [DYAD_NFT_DATA:${JSON.stringify(data.data)}]`;
+    }
+
     let formattedContent = `✅ **Successfully fetched data from "${command}"**\n\n`;
 
     switch (command) {
         case 'get-data':
             formattedContent += `Here is the sample data you requested:\n- **Message:** ${data.message}\n- **Timestamp:** ${new Date(data.timestamp).toLocaleString()}`;
-            break;
-        case 'nft-metadata':
-            const meta = data.metadata?.results?.[0];
-            if (meta && meta.name) {
-                formattedContent += `**NFT Details for Token ID ${data.token_id}**\n`;
-                formattedContent += `- **Contract:** \`${data.contract_address}\`\n`;
-                formattedContent += `- **Name:** ${meta.name}\n`;
-                if (meta.description) {
-                    formattedContent += `- **Description:** ${meta.description}\n`;
-                }
-                if (meta.image_url) {
-                    formattedContent += `- **Image:** [View Image](${meta.image_url})\n`;
-                }
-                if (meta.attributes && meta.attributes.length > 0) {
-                    formattedContent += `- **Attributes:**\n`;
-                    meta.attributes.forEach((attr: any) => {
-                        formattedContent += `  - *${attr.trait_type}:* ${attr.value}\n`;
-                    });
-                }
-            } else {
-                 formattedContent += `Could not retrieve detailed metadata. Here is the raw data:\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
-            }
             break;
         case 'trading-signals':
             formattedContent += `**Latest Trading Signals:**\n`;
@@ -135,7 +118,7 @@ async function handlePaidRequest(userId: string, command: string, args: Record<s
 
             if (paymentResponse) {
                 content += `\n\n---\n**Payment Details:**\n*Transaction Hash:* \`${paymentResponse.transaction}\``;
-            } else {
+            } else if (command !== 'nft-metadata') {
                 content += `\n\n*(Access was granted without a new payment, you may already have access).*`;
             }
             return content;
