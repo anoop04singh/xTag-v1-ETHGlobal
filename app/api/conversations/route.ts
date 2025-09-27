@@ -25,10 +25,8 @@ export async function GET(request: NextRequest) {
       id: conv.id,
       title: conv.title,
       updatedAt: conv.updatedAt.toISOString(),
-      messageCount: conv.messages.length,
-      preview: conv.messages[conv.messages.length - 1]?.content.slice(0, 80) || 'No messages yet.',
-      pinned: false, // Pinned state will be managed on the client for now
-      folder: null, // Folder state will be managed on the client for now
+      // Pinned state is managed on the client for simplicity in this MVP
+      pinned: false, 
       messages: conv.messages.map(msg => ({
         id: msg.id,
         role: msg.role,

@@ -1,13 +1,10 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { Calendar, LayoutGrid, MoreHorizontal } from "lucide-react"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
 import ChatPane from "./ChatPane"
-import GhostIconButton from "./GhostIconButton"
 import ThemeToggle from "./ThemeToggle"
-import CreateSubscriptionModal from "./CreateSubscriptionModal"
 import { useAuth } from "../context/AuthContext"
 
 export default function AIAssistantUI() {
@@ -47,9 +44,9 @@ export default function AIAssistantUI() {
   const [collapsed, setCollapsed] = useState(() => {
     try {
       const raw = localStorage.getItem("sidebar-collapsed")
-      return raw ? JSON.parse(raw) : { pinned: true, recent: false, subscriptions: false, folders: true, templates: true }
+      return raw ? JSON.parse(raw) : { pinned: true, recent: false }
     } catch {
-      return { pinned: true, recent: false, subscriptions: false, folders: true, templates: true }
+      return { pinned: true, recent: false }
     }
   })
   useEffect(() => {
@@ -75,47 +72,32 @@ export default function AIAssistantUI() {
 
   const [conversations, setConversations] = useState([])
   const [selectedId, setSelectedId] = useState(null)
-  const [templates, setTemplates] = useState([])
-  const [folders, setFolders] = useState([])
-  const [subscriptions, setSubscriptions] = useState([])
-  const [showCreateSubscriptionModal, setShowCreateSubscriptionModal] = useState(false)
-
   const [query, setQuery] = useState("")
   const searchRef = useRef(null)
-
   const [isThinking, setIsThinking] = useState(false)
   const [thinkingConvId, setThinkingConvId] = useState(null)
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchConversations = async () => {
       if (!token) return;
       try {
-        // Fetch conversations
-        const convRes = await fetch('/api/conversations', {
+        const res = await fetch('/api/conversations', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (convRes.ok) {
-          const convData = await convRes.json();
-          setConversations(convData);
-          if (convData.length > 0 && !selectedId) {
-            setSelectedId(convData[0].id);
-          } else if (convData.length === 0) {
+        if (res.ok) {
+          const data = await res.json();
+          setConversations(data);
+          if (data.length > 0 && !selectedId) {
+            setSelectedId(data[0].id);
+          } else if (data.length === 0) {
             createNewChat();
           }
         }
-        // Fetch subscriptions
-        const subRes = await fetch('/api/subscriptions', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          setSubscriptions(subData);
-        }
       } catch (error) {
-        console.error("Failed to fetch data", error);
+        console.error("Failed to fetch conversations", error);
       }
     };
-    fetchData();
+    fetchConversations();
   }, [token]);
 
   useEffect(() => {
@@ -124,107 +106,57 @@ export default function AIAssistantUI() {
         e.preventDefault()
         createNewChat()
       }
-      if (!e.metaKey && !e.ctrlKey && e.key === "/") {
-        const tag = document.activeElement?.tagName?.toLowerCase()
-        if (tag !== "input" && tag !== "textarea") {
-          e.preventDefault()
-          searchRef.current?.focus()
-        }
-      }
       if (e.key === "Escape" && sidebarOpen) setSidebarOpen(false)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [sidebarOpen, conversations])
+  }, [sidebarOpen])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations
     const q = query.toLowerCase()
-    return conversations.filter((c) => c.title.toLowerCase().includes(q) || c.preview.toLowerCase().includes(q))
+    return conversations.filter((c) => c.title.toLowerCase().includes(q))
   }, [conversations, query])
 
   const pinned = filtered.filter((c) => c.pinned).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
-
-  const recent = filtered
-    .filter((c) => !c.pinned)
-    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
-    .slice(0, 10)
-
-  const folderCounts = React.useMemo(() => {
-    const map = Object.fromEntries(folders.map((f) => [f.name, 0]))
-    for (const c of conversations) if (map[c.folder] != null) map[c.folder] += 1
-    return map
-  }, [conversations, folders])
+  const recent = filtered.filter((c) => !c.pinned).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
 
   function togglePin(id) {
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)))
   }
 
   function createNewChat() {
-    const tempId = `temp-${Math.random().toString(36).slice(2)}`;
+    const tempId = `temp-${Date.now()}`;
     const item = {
       id: tempId,
       title: "New Chat",
       updatedAt: new Date().toISOString(),
       messages: [],
-      preview: "Say hello to start...",
       pinned: false,
-      folder: null,
     };
     setConversations((prev) => [item, ...prev]);
     setSelectedId(tempId);
     setSidebarOpen(false);
   }
 
-  function createFolder() {
-    const name = prompt("Folder name")
-    if (!name) return
-    if (folders.some((f) => f.name.toLowerCase() === name.toLowerCase())) return alert("Folder already exists.")
-    setFolders((prev) => [...prev, { id: Math.random().toString(36).slice(2), name }])
-  }
-
-  async function handleCreateSubscription(subscriptionData) {
-    if (!token) return;
-    try {
-      const res = await fetch('/api/subscriptions', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(subscriptionData),
-      });
-      if (res.ok) {
-        const newSubscription = await res.json();
-        setSubscriptions(prev => [newSubscription, ...prev]);
-      } else {
-        console.error("Failed to create subscription");
-      }
-    } catch (error) {
-      console.error("Error creating subscription:", error);
-    }
-  }
-
-  async function sendMessage(convId, content) {
+  async function sendMessage(content) {
     if (!content.trim() || !token) return;
 
-    const now = new Date().toISOString();
-    const userMsg = { id: `temp-user-${Date.now()}`, role: "user", content, createdAt: now };
+    const currentConvId = selectedId;
+    const isNewChat = currentConvId.startsWith('temp-');
+
+    const userMsg = { id: `temp-user-${Date.now()}`, role: "user", content, createdAt: new Date().toISOString() };
     
     setConversations(prev =>
-      prev.map(c => {
-        if (c.id !== convId) return c;
-        return { ...c, messages: [...(c.messages || []), userMsg] };
-      })
+      prev.map(c => c.id !== currentConvId ? c : { ...c, messages: [...(c.messages || []), userMsg] })
     );
 
     setIsThinking(true);
-    setThinkingConvId(convId);
+    setThinkingConvId(currentConvId);
 
     try {
-      const isNewChat = convId.startsWith('temp-');
       const payload = {
-        conversationId: isNewChat ? null : convId,
+        conversationId: isNewChat ? null : currentConvId,
         message: content,
       };
 
@@ -237,66 +169,42 @@ export default function AIAssistantUI() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        throw new Error('Failed to send message');
-      }
-
+      if (!res.ok) throw new Error('Failed to send message');
+      
       const data = await res.json();
-      const assistantMessage = data.message;
-
+      
       setConversations(prev =>
         prev.map(c => {
-          if (c.id !== convId) return c;
+          if (c.id !== (isNewChat ? currentConvId : data.conversationId)) return c;
           
-          const finalMessages = c.messages.filter(m => !m.id.startsWith('temp-user-'));
-          finalMessages.push(userMsg, assistantMessage);
+          const newMessages = [...(c.messages || []).filter(m => m.id !== userMsg.id), userMsg, data.message];
 
-          if (data.isNewConversation) {
-            return {
-              ...c,
-              id: data.conversationId,
-              title: data.title,
-              messages: [...c.messages, assistantMessage],
-              updatedAt: new Date().toISOString(),
-            };
-          } else {
-            return { ...c, messages: [...c.messages, assistantMessage], updatedAt: new Date().toISOString() };
-          }
-        }).map(c => data.isNewConversation && c.id === convId ? {...c, id: data.conversationId, title: data.title} : c)
+          return {
+            ...c,
+            id: data.conversationId,
+            title: data.title,
+            messages: newMessages,
+            updatedAt: new Date().toISOString(),
+          };
+        })
       );
       
-      if (data.isNewConversation) {
+      if (isNewChat) {
         setSelectedId(data.conversationId);
       }
 
     } catch (error) {
       console.error("Error sending message:", error);
+      const errorMsg = { id: `temp-error-${Date.now()}`, role: "assistant", content: "Sorry, something went wrong.", createdAt: new Date().toISOString() };
+      setConversations(prev =>
+        prev.map(c => c.id !== currentConvId ? c : { ...c, messages: [...(c.messages || []), errorMsg] })
+      );
     } finally {
       setIsThinking(false);
       setThinkingConvId(null);
     }
   }
 
-  function editMessage(convId, messageId, newContent) {
-    console.log("Editing is not yet supported with the backend.");
-  }
-
-  function resendMessage(convId, messageId) {
-    console.log("Resending is not yet supported with the backend.");
-  }
-
-  function pauseThinking() {
-    setIsThinking(false)
-    setThinkingConvId(null)
-  }
-
-  function handleUseTemplate(template) {
-    if (composerRef.current) {
-      composerRef.current.insertTemplate(template.content)
-    }
-  }
-
-  const composerRef = useRef(null)
   const selected = conversations.find((c) => c.id === selectedId) || null
 
   return (
@@ -306,15 +214,6 @@ export default function AIAssistantUI() {
           <span className="inline-flex h-4 w-4 items-center justify-center">✱</span> AI Assistant
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <GhostIconButton label="Schedule">
-            <Calendar className="h-4 w-4" />
-          </GhostIconButton>
-          <GhostIconButton label="Apps">
-            <LayoutGrid className="h-4 w-4" />
-          </GhostIconButton>
-          <GhostIconButton label="More">
-            <MoreHorizontal className="h-4 w-4" />
-          </GhostIconButton>
           <ThemeToggle theme={theme} setTheme={setTheme} />
         </div>
       </div>
@@ -329,44 +228,27 @@ export default function AIAssistantUI() {
           setCollapsed={setCollapsed}
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}
-          conversations={conversations}
           pinned={pinned}
           recent={recent}
-          folders={folders}
-          folderCounts={folderCounts}
           selectedId={selectedId}
           onSelect={(id) => setSelectedId(id)}
           togglePin={togglePin}
           query={query}
           setQuery={setQuery}
           searchRef={searchRef}
-          createFolder={createFolder}
           createNewChat={createNewChat}
-          templates={templates}
-          setTemplates={setTemplates}
-          onUseTemplate={handleUseTemplate}
-          subscriptions={subscriptions}
-          onShowCreateSubscription={() => setShowCreateSubscriptionModal(true)}
         />
 
         <main className="relative flex min-w-0 flex-1 flex-col">
           <Header createNewChat={createNewChat} sidebarCollapsed={sidebarCollapsed} setSidebarOpen={setSidebarOpen} />
           <ChatPane
-            ref={composerRef}
             conversation={selected}
-            onSend={(content) => selected && sendMessage(selected.id, content)}
-            onEditMessage={(messageId, newContent) => selected && editMessage(selected.id, messageId, newContent)}
-            onResendMessage={(messageId) => selected && resendMessage(selected.id, messageId)}
+            onSend={(content) => sendMessage(content)}
             isThinking={isThinking && thinkingConvId === selected?.id}
-            onPauseThinking={pauseThinking}
+            onPauseThinking={() => setIsThinking(false)}
           />
         </main>
       </div>
-      <CreateSubscriptionModal
-        isOpen={showCreateSubscriptionModal}
-        onClose={() => setShowCreateSubscriptionModal(false)}
-        onCreateSubscription={handleCreateSubscription}
-      />
     </div>
   )
 }

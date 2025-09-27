@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, forwardRef, useImperativeHandle, useRef } from "react"
-import { Pencil, RefreshCw, Check, X, Square } from "lucide-react"
+import { useState } from "react"
+import { Square } from "lucide-react"
 import Message from "./Message"
 import Composer from "./Composer"
-import { cls, timeAgo } from "./utils"
 
 function ThinkingMessage({ onPause }) {
   return (
@@ -27,49 +26,12 @@ function ThinkingMessage({ onPause }) {
   )
 }
 
-const ChatPane = forwardRef(function ChatPane(
-  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking },
-  ref,
-) {
-  const [editingId, setEditingId] = useState(null)
-  const [draft, setDraft] = useState("")
+export default function ChatPane({ conversation, onSend, isThinking, onPauseThinking }) {
   const [busy, setBusy] = useState(false)
-  const composerRef = useRef(null)
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      insertTemplate: (templateContent) => {
-        composerRef.current?.insertTemplate(templateContent)
-      },
-    }),
-    [],
-  )
 
   if (!conversation) return null
 
   const messages = Array.isArray(conversation.messages) ? conversation.messages : []
-  const count = messages.length || conversation.messageCount || 0
-
-  function startEdit(m) {
-    setEditingId(m.id)
-    setDraft(m.content)
-  }
-  function cancelEdit() {
-    setEditingId(null)
-    setDraft("")
-  }
-  function saveEdit() {
-    if (!editingId) return
-    onEditMessage?.(editingId, draft)
-    cancelEdit()
-  }
-  function saveAndResend() {
-    if (!editingId) return
-    onEditMessage?.(editingId, draft)
-    onResendMessage?.(editingId)
-    cancelEdit()
-  }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -77,65 +39,18 @@ const ChatPane = forwardRef(function ChatPane(
         <div className="mb-2 text-3xl font-serif tracking-tight sm:text-4xl md:text-5xl">
           <span className="block leading-[1.05] font-sans text-2xl">{conversation.title}</span>
         </div>
-        <div className="mb-6 border-b border-zinc-200 pb-5 text-sm text-zinc-500 dark:border-zinc-800">
-          Updated {timeAgo(conversation.updatedAt)} · {count} messages
-        </div>
-
+        
         {messages.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            No messages yet. Say hello to start.
+            No messages yet. Say hello or try the command `run "get-data"`.
           </div>
         ) : (
           <>
             {messages.map((m) => (
               <div key={m.id} className="space-y-2">
-                {editingId === m.id ? (
-                  <div className={cls("rounded-2xl border p-2", "border-zinc-200 dark:border-zinc-800")}>
-                    <textarea
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      className="w-full resize-y rounded-xl bg-transparent p-2 text-sm outline-none"
-                      rows={3}
-                    />
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        onClick={saveEdit}
-                        className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1.5 text-xs text-white dark:bg-white dark:text-zinc-900"
-                      >
-                        <Check className="h-3.5 w-3.5" /> Save
-                      </button>
-                      <button
-                        onClick={saveAndResend}
-                        className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5" /> Save & Resend
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs"
-                      >
-                        <X className="h-3.5 w-3.5" /> Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <Message role={m.role}>
-                    <div className="whitespace-pre-wrap">{m.content}</div>
-                    {m.role === "user" && (
-                      <div className="mt-1 flex gap-2 text-[11px] text-zinc-500">
-                        <button className="inline-flex items-center gap-1 hover:underline" onClick={() => startEdit(m)}>
-                          <Pencil className="h-3.5 w-3.5" /> Edit
-                        </button>
-                        <button
-                          className="inline-flex items-center gap-1 hover:underline"
-                          onClick={() => onResendMessage?.(m.id)}
-                        >
-                          <RefreshCw className="h-3.5 w-3.5" /> Resend
-                        </button>
-                      </div>
-                    )}
-                  </Message>
-                )}
+                <Message role={m.role}>
+                  <div className="whitespace-pre-wrap">{m.content}</div>
+                </Message>
               </div>
             ))}
             {isThinking && <ThinkingMessage onPause={onPauseThinking} />}
@@ -144,7 +59,6 @@ const ChatPane = forwardRef(function ChatPane(
       </div>
 
       <Composer
-        ref={composerRef}
         onSend={async (text) => {
           if (!text.trim()) return
           setBusy(true)
@@ -155,6 +69,4 @@ const ChatPane = forwardRef(function ChatPane(
       />
     </div>
   )
-})
-
-export default ChatPane
+}
