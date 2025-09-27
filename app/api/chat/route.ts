@@ -64,12 +64,15 @@ export async function POST(request: NextRequest) {
 
         if (subscription) {
             try {
+                // Attempt to access the resource. This will trigger the x402 flow if needed.
                 const { data, txHash } = await makePaidRequest(user.id, `/api/subscriptions/${subscription.id}/access`, userToken);
                 
                 const purchase = await prisma.purchase.findUnique({ where: { userId_subscriptionId: { userId: user.id, subscriptionId: subscription.id } } });
 
                 let wasNewPurchase = false;
+                // The presence of a txHash confirms a new, successful on-chain transaction.
                 if (!purchase && txHash) {
+                    // Create a permanent record of the purchase with the on-chain transaction hash.
                     await prisma.purchase.create({
                         data: { userId: user.id, subscriptionId: subscription.id, txHash }
                     });
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
 
                 let finalContent = aiResponseContent;
                 if (wasNewPurchase) {
-                    finalContent = `Payment of ${subscription.price.toString()} MATIC for "${subName}" was successful! Here is the result:\n\n${aiResponseContent}`;
+                    finalContent = `Payment of ${subscription.price.toString()} MATIC for "${subName}" was successful! Transaction confirmed on-chain. Here is the result:\n\n${aiResponseContent}`;
                 }
                 
                 const assistantMessage = await prisma.message.create({
