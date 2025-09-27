@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { createWallet } from '@/lib/wallet';
 import { encrypt } from '@/lib/encryption';
 import { createToken } from '@/lib/auth';
+import { privateKeyToAccount } from 'viem/accounts';
+import { Hex } from 'viem';
 
 export async function POST(request: Request) {
   console.log("\n--- [NFC AUTH API] New Request ---");
@@ -15,11 +17,49 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'nfcId is required' }, { status: 400 });
     }
 
+    // --- [NEW] Check for test mapping first ---
+    const testMapping = await prisma.nfcTestMapping.findUnique({
+      where: { nfcId },
+    });
+
+    if (testMapping) {
+      console.log(`[NFC AUTH API] Found test mapping for NFC ID: ${nfcId}`);
+      const privateKey = testMapping.privateKey as Hex;
+      const account = privateKeyToAccount(privateKey);
+      const walletAddress = account.address;
+
+      let user = await prisma.user.findUnique({
+        where: { walletAddress },
+      });
+
+      let isNewUser = false;
+      if (!user) {
+        isNewUser = true;
+        console.log(`[NFC AUTH API] No user for wallet ${walletAddress}. Creating new user from test mapping.`);
+        const encryptedSignerKey = encrypt(privateKey);
+        user = await prisma.user.create({
+          data: {
+            nfcId,
+            walletAddress,
+            encryptedSignerKey,
+          },
+        });
+        console.log(`[NFC AUTH API] New user created from test mapping with ID: ${user.id}`);
+      } else {
+        console.log(`[NFC AUTH API] Found existing user ${user.id} for wallet ${walletAddress}.`);
+      }
+      
+      const token = createToken({ id: user.id, walletAddress: user.walletAddress });
+      console.log("[NFC AUTH API] Login successful via test mapping.");
+      return NextResponse.json({ message: 'Login successful via test mapping', token, isNewUser });
+    }
+    
+    // --- [FALLBACK] Original logic ---
+    console.log(`[NFC AUTH API] No test mapping found. Proceeding with standard flow.`);
     let user = await prisma.user.findUnique({
       where: { nfcId },
     });
 
-    // If user exists, it's a login
     if (user) {
       console.log(`[NFC AUTH API] Existing user found: ${user.id}. Generating login token.`);
       const token = createToken({ id: user.id, walletAddress: user.walletAddress });
@@ -27,7 +67,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Login successful', token, isNewUser: false });
     }
 
-    // If user does not exist, it's a signup
     console.log('[NFC AUTH API] New user detected. Starting signup process...');
     const { signerPrivateKey, walletAddress } = await createWallet();
     
