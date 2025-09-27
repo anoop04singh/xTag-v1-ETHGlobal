@@ -11,8 +11,8 @@ const endpoints = [
   },
   {
     name: "NFT Metadata",
-    command: 'run "nft-metadata"',
-    description: "Retrieves detailed metadata for a specific Non-Fungible Token (NFT), including its name, description, image URL, and attributes.",
+    command: 'run "nft-metadata" --contract_address <address> --token_id <id>',
+    description: "Retrieves detailed metadata for a specific Non-Fungible Token (NFT) on the Polygon network. You must provide the contract address and token ID.",
   },
   {
     name: "Trading Signals",

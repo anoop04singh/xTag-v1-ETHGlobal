@@ -10,31 +10,51 @@ import { withPaymentInterceptor, decodeXPaymentResponse } from 'x402-axios';
 
 const PAID_RESOURCE_BASE_URL = 'https://x402-server-updated.vercel.app';
 
+function parseArguments(argString: string): Record<string, string> {
+  const args: Record<string, string> = {};
+  const regex = /--(\w+)\s+([^\s]+|"[^"]+")/g;
+  let match;
+  while ((match = regex.exec(argString)) !== null) {
+    const key = match[1];
+    let value = match[2];
+    if (value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1);
+    }
+    args[key] = value;
+  }
+  return args;
+}
+
 async function getAIContext(): Promise<string> {
     return `You are an AI assistant with access to paid API endpoints.
 Your primary goal is to help users by identifying when their request can be fulfilled by one of these endpoints.
 
 Here are the available commands, their descriptions, and their costs:
 - "get-data": Fetches a sample dataset. Cost: 0.01 USDC.
-- "nft-metadata": Retrieves detailed metadata for a specific NFT. Cost: 0.05 USDC.
+- "nft-metadata": Retrieves detailed metadata for a specific NFT. Requires a contract address and a token ID. Cost: 0.002 USDC.
 - "trading-signals": Provides the latest cryptocurrency trading signals. Cost: 0.10 USDC.
 - "documentation": Accesses technical documentation and guides. Cost: 0.02 USDC.
 
 INTERACTION FLOW:
-1. When a user's query matches the functionality of a command, you MUST ask for their permission to run it.
-2. Your response must be a clear question that INCLUDES THE COST. For example: "I can get the latest trading signals for you. This will cost 0.10 USDC. Shall I proceed?"
-3. At the end of your response, you MUST include a special action token in the format [DYAD_ACTION:run "command-name"].
+1.  When a user's query matches a command's functionality, you MUST ask for their permission and any required information.
+2.  Your response must be a clear question that INCLUDES THE COST.
+3.  At the end of your response, you MUST include a special action token in the format [DYAD_ACTION:run "command-name" --arg1 value1 --arg2 value2].
 
-EXAMPLE:
-User: "show me the latest crypto trading signals"
-Your response: "I can fetch the latest cryptocurrency trading signals for you. This action costs 0.10 USDC. Would you like me to proceed? [DYAD_ACTION:run "trading-signals"]"
+EXAMPLES:
+- User: "show me the latest crypto trading signals"
+  Your response: "I can fetch the latest cryptocurrency trading signals for you. This action costs 0.10 USDC. Would you like me to proceed? [DYAD_ACTION:run "trading-signals"]"
+
+- User: "can you get me info on an NFT?"
+  Your response: "Yes, I can fetch NFT metadata for you. This costs 0.002 USDC. What is the contract address and token ID of the NFT?"
+
+- User: "the contract is 0x123... and the token is 456"
+  Your response: "Great. I will now fetch the metadata for that NFT. Please confirm. [DYAD_ACTION:run "nft-metadata" --contract_address 0x123... --token_id 456]"
 
 IMPORTANT:
 - Always state the cost when asking for permission.
+- If a command needs parameters (like nft-metadata), ask for them first before providing the action token.
 - Only suggest one command at a time.
-- Do not execute the command yourself. The user will confirm via a button.
-- If the user's query is general conversation, just chat with them normally without suggesting a command.
-- If the user explicitly types 'run "command-name"', the system will handle it directly, so you don't need to respond to that.`;
+- If the user explicitly types the full 'run' command, the system will handle it directly.`;
 }
 
 function formatApiResponse(command: string, data: any): string {
@@ -45,12 +65,25 @@ function formatApiResponse(command: string, data: any): string {
             formattedContent += `Here is the sample data you requested:\n- **Message:** ${data.message}\n- **Timestamp:** ${new Date(data.timestamp).toLocaleString()}`;
             break;
         case 'nft-metadata':
-            formattedContent += `**NFT Details:**\n- **Name:** ${data.name}\n- **Description:** ${data.description}\n- **Image:** [View Image](${data.image})\n`;
-            if (data.attributes && data.attributes.length > 0) {
-                formattedContent += `- **Attributes:**\n`;
-                data.attributes.forEach((attr: any) => {
-                    formattedContent += `  - *${attr.trait_type}:* ${attr.value}\n`;
-                });
+            const meta = data.metadata?.results?.[0];
+            if (meta && meta.name) {
+                formattedContent += `**NFT Details for Token ID ${data.token_id}**\n`;
+                formattedContent += `- **Contract:** \`${data.contract_address}\`\n`;
+                formattedContent += `- **Name:** ${meta.name}\n`;
+                if (meta.description) {
+                    formattedContent += `- **Description:** ${meta.description}\n`;
+                }
+                if (meta.image_url) {
+                    formattedContent += `- **Image:** [View Image](${meta.image_url})\n`;
+                }
+                if (meta.attributes && meta.attributes.length > 0) {
+                    formattedContent += `- **Attributes:**\n`;
+                    meta.attributes.forEach((attr: any) => {
+                        formattedContent += `  - *${attr.trait_type}:* ${attr.value}\n`;
+                    });
+                }
+            } else {
+                 formattedContent += `Could not retrieve detailed metadata. Here is the raw data:\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
             }
             break;
         case 'trading-signals':
@@ -61,11 +94,9 @@ function formatApiResponse(command: string, data: any): string {
             });
             break;
         case 'documentation':
-            // Check for expected fields to prevent 'undefined' output
             if (data.topic && data.version && data.content) {
                 formattedContent += `**Documentation Found:**\n- **Topic:** ${data.topic}\n- **Version:** ${data.version}\n\n---\n\n${data.content}`;
             } else {
-                // Fallback for unexpected structure
                 formattedContent += `**Documentation Content:**\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
             }
             break;
@@ -76,7 +107,7 @@ function formatApiResponse(command: string, data: any): string {
     return formattedContent;
 }
 
-async function handlePaidRequest(userId: string, command: string) {
+async function handlePaidRequest(userId: string, command: string, args: Record<string, string>) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
         throw new Error('User not found for paid request.');
@@ -89,11 +120,12 @@ async function handlePaidRequest(userId: string, command: string) {
     const retries = 2;
     const delay = 1000;
     const path = `/api/${command}`;
+    const params = command === 'nft-metadata' ? { contract_address: args.contract_address, token_id: args.token_id } : {};
 
     for (let i = 0; i <= retries; i++) {
         try {
-            console.log(`[CHAT API] Making paid request to ${path}, attempt ${i + 1}/${retries + 1}`);
-            const response = await api.get(path);
+            console.log(`[CHAT API] Making paid request to ${path} with params:`, params);
+            const response = await api.get(path, { params });
             
             const paymentResponse = response.headers['x-payment-response'] 
                 ? decodeXPaymentResponse(response.headers['x-payment-response'])
@@ -106,7 +138,7 @@ async function handlePaidRequest(userId: string, command: string) {
             } else {
                 content += `\n\n*(Access was granted without a new payment, you may already have access).*`;
             }
-            return content; // Success
+            return content;
 
         } catch (error: any) {
             console.error(`[CHAT API] Attempt ${i + 1} failed:`, error.response?.data || error.message);
@@ -143,13 +175,21 @@ export async function POST(request: NextRequest) {
 
     let responseContent: string;
 
-    const commandMatch = message.trim().toLowerCase().match(/^run "([^"]+)"$/);
+    const commandRegex = /^run "([^"]+)"(.*)$/;
+    const commandMatch = message.trim().match(commandRegex);
     const validCommands = ["get-data", "nft-metadata", "trading-signals", "documentation"];
 
     if (commandMatch && validCommands.includes(commandMatch[1])) {
         const command = commandMatch[1];
+        const argString = commandMatch[2].trim();
+        const args = parseArguments(argString);
+
+        if (command === 'nft-metadata' && (!args.contract_address || !args.token_id)) {
+            return NextResponse.json({ role: 'assistant', content: 'Error: The "nft-metadata" command requires both --contract_address and --token_id arguments.' });
+        }
+
         try {
-            responseContent = await handlePaidRequest(user.id, command);
+            responseContent = await handlePaidRequest(user.id, command, args);
         } catch (error: any) {
             responseContent = `Error: ${error.message}`;
         }
