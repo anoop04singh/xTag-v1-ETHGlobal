@@ -58,9 +58,9 @@ IMPORTANT:
 }
 
 function formatApiResponse(command: string, data: any): string {
-    if (command === 'nft-metadata' && data.data && Array.isArray(data.data)) {
-        const count = data.data.length;
-        return `✅ I found details for ${count} NFT(s). You can view them now. [DYAD_NFT_DATA:${JSON.stringify(data.data)}]`;
+    if (command === 'nft-metadata' && data.metadata && data.metadata.data && Array.isArray(data.metadata.data)) {
+        const count = data.metadata.data.length;
+        return `✅ I found details for ${count} NFT(s). You can view them now. [DYAD_NFT_DATA:${JSON.stringify(data.metadata.data)}]`;
     }
 
     let formattedContent = `✅ **Successfully fetched data from "${command}"**\n\n`;
