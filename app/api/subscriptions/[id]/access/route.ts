@@ -19,7 +19,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       console.log(`[ACCESS API] Access GRANTED for user ${user.id} to subscription ${subscriptionId}.`);
       return NextResponse.json({ prompt: result.prompt });
     } else if (result.status === 402) {
-      console.log(`[ACCESS API] Access DENIED. Returning 402 Payment Required.`);
+      console.log(`[ACCESS API] Access DENIED. Returning 402 Payment Required with 'accepts' structure.`);
+      // The result.paymentRequirements object is now { accepts: [...] }
       return new Response(JSON.stringify(result.paymentRequirements), {
         status: 402,
         headers: { 'Content-Type': 'application/json' },
