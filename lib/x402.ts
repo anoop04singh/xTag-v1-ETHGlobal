@@ -3,45 +3,47 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { decrypt } from './encryption';
 import { prisma } from './db';
 
-export async function makePaidRequest(userId: string, url: string, userToken: string) {
+export async function makePaidRequest(userId: string, relativeUrl: string, userToken: string) {
+  const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}${relativeUrl}`;
+  console.log(`[x402] Initiating paid request for user ${userId} to: ${fullUrl}`);
+  
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    throw new Error('User not found');
-  }
+  if (!user) throw new Error('User not found');
 
-  // 1. Decrypt the user's private key to control their smart account for the transaction.
   const privateKey = decrypt(user.encryptedSignerKey);
   const account = privateKeyToAccount(privateKey as `0x${string}`);
+  console.log(`[x402] Decrypted private key for smart wallet: ${user.smartAccountAddress}`);
 
-  // 2. Wrap the standard 'fetch' with x402 payment logic.
-  // This uses the user's account to sign the transaction via the facilitator.
+  // Use the standard global `fetch` API, which is what the library is designed for.
   const fetchWithPayment = wrapFetchWithPayment(fetch, account, {
     facilitatorUrl: process.env.X402_FACILITATOR_URL,
   });
+  console.log(`[x402] Fetch wrapped with payment logic using facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
-  const absoluteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${url}`;
+  try {
+    const response = await fetchWithPayment(fullUrl, {
+      headers: { 'Authorization': `Bearer ${userToken}` },
+    });
 
-  // 3. Make the request. If payment is required (402), x402-fetch handles the on-chain transaction.
-  const response = await fetchWithPayment(absoluteUrl, {
-    headers: {
-      // Forward the user's JWT to the resource endpoint for authorization.
-      'Authorization': `Bearer ${userToken}`,
-    },
-  });
+    console.log(`[x402] Response received from API with status: ${response.status}`);
 
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Payment failed or was rejected.');
-    } catch {
-      throw new Error(`Payment failed with status ${response.status}.`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[x402] ERROR: Payment failed or was rejected. Status: ${response.status}`, errorText);
+      throw new Error(`Payment failed: ${errorText}`);
     }
-  }
 
-  // 4. On success, the facilitator includes the on-chain transaction hash in the headers.
-  const txHash = response.headers.get('x-402-tx-hash');
-  const data = await response.json();
-  
-  // 5. Return the premium content AND the transaction hash as proof.
-  return { data, txHash };
+    const txHash = response.headers.get('x-402-tx-hash');
+    if (txHash) {
+      console.log(`[x402] SUCCESS: On-chain transaction confirmed. Tx Hash: ${txHash}`);
+    } else {
+      console.log('[x402] SUCCESS: Access granted without a new transaction (user likely already owns the item).');
+    }
+    
+    const data = await response.json();
+    return { data, txHash };
+  } catch (error) {
+    console.error('[x402] CRITICAL ERROR during makePaidRequest:', error);
+    throw error;
+  }
 }
