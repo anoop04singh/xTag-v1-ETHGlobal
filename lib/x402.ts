@@ -24,9 +24,9 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   console.log(`[x402] Viem WalletClient created for address: ${walletClient.account.address}`);
 
   const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient, {
-    facilitatorUrl: 'https://facilitator.x402.rs', // Use the new, correct facilitator URL
+    facilitatorUrl: 'https://x402.polygon.technology', // Reverting to the compatible facilitator URL
   });
-  console.log(`[x402] Fetch wrapped with WalletClient and facilitator: https://facilitator.x402.rs`);
+  console.log(`[x402] Fetch wrapped with WalletClient and facilitator: https://x402.polygon.technology`);
 
   try {
     const response = await fetchWithPayment(fullUrl, {
