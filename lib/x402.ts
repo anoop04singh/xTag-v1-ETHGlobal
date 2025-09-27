@@ -17,9 +17,12 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
 
   const axiosInstance = axios.create();
   
-  // Corrected the function call to match the provided example (2 arguments only)
-  const axiosWithPayment = withPaymentInterceptor(axiosInstance, account);
-  console.log(`[x402-axios] Axios wrapped with payment interceptor.`);
+  const axiosWithPayment = withPaymentInterceptor(
+    axiosInstance, 
+    account,
+    (requirements) => requirements[0] // Explicitly provide a selector function
+  );
+  console.log(`[x402-axios] Axios wrapped with payment interceptor and a selector.`);
 
   try {
     console.log(`[x402-axios] Making initial request to ${fullUrl}`);
