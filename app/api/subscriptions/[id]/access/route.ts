@@ -19,6 +19,7 @@ export async function GET(request: NextRequest, context: { params: { id: string 
       console.log(`[ACCESS API] Access GRANTED for user ${user.id} to subscription ${subscriptionId}.`);
       const headers = new Headers();
       if (result.txHash) {
+        // As per the spec, return the settlement details in the X-PAYMENT-RESPONSE header
         headers.set('X-PAYMENT-RESPONSE', Buffer.from(JSON.stringify({ txHash: result.txHash })).toString('base64'));
       }
       return new Response(JSON.stringify({ prompt: result.prompt }), { status: 200, headers });
