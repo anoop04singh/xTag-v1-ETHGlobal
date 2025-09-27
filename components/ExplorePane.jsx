@@ -26,8 +26,8 @@ const endpoints = [
   },
   {
     name: "Wallet Portfolio",
-    command: 'run "wallet-balance"',
-    description: "Fetches your ERC20 token portfolio on the Polygon network using your connected wallet address.",
+    command: 'run "wallet-balance" --address <address>',
+    description: "Fetches the ERC20 token portfolio for any specified wallet address on the Polygon network. If you omit the address, it will default to your connected wallet.",
   },
 ];
 
