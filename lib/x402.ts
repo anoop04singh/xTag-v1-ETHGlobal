@@ -36,6 +36,9 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
     },
     chain: polygonAmoy,
     sendTransaction: biconomySmartAccount.sendTransaction.bind(biconomySmartAccount),
+    // Correctly implement signTypedData by binding it from the Biconomy client
+    signTypedData: biconomySmartAccount.signTypedData.bind(biconomySmartAccount),
+    
     // Add dummy properties and functions to satisfy the WalletClient type expected by x402-fetch
     key: 'biconomy-adapter',
     type: 'biconomy-adapter',
@@ -49,7 +52,6 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
     requestAddresses: () => { throw new Error('requestAddresses not implemented on adapter'); },
     requestPermissions: () => { throw new Error('requestPermissions not implemented on adapter'); },
     signMessage: () => { throw new Error('signMessage not implemented on adapter'); },
-    signTypedData: () => { throw new Error('signTypedData not implemented on adapter'); },
     switchChain: () => { throw new Error('switchChain not implemented on adapter'); },
     watchAsset: () => { throw new Error('watchAsset not implemented on adapter'); },
     sendRawTransaction: () => { throw new Error('sendRawTransaction not implemented on adapter'); },
