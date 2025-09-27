@@ -52,14 +52,10 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
     try {
       const facilitatorUrl = 'https://facilitator.x402.rs';
 
-      // FIX: Decode the header and construct the body exactly as the facilitator expects.
-      const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
-
+      // FIX: Send the original base64 header directly to the facilitator.
       const finalBodyForFacilitator = {
-        paymentPayload: {
-          x402Version: 1,
-          ...decodedPayload
-        },
+        x402Version: 1,
+        paymentHeader: paymentHeader,
         paymentRequirements: paymentRequirements.accepts[0],
       };
       console.log("[ACCESS LIB] Final body prepared for facilitator:", JSON.stringify(finalBodyForFacilitator));
