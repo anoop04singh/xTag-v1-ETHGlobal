@@ -70,6 +70,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
     "viem": "^2.37.8",
+    "x402-fetch": "^0.6.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

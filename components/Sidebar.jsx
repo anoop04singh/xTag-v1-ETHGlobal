@@ -326,7 +326,7 @@ export default function Sidebar({
                     <Plus className="h-4 w-4" /> Create subscription
                   </button>
                   {subscriptions.map((sub) => (
-                    <SubscriptionRow key={sub.id} subscription={sub} />
+                    <SubscriptionRow key={sub.id} subscription={sub} isCreator={user?.id === sub.creatorId} />
                   ))}
                   {subscriptions.length === 0 && (
                      <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">

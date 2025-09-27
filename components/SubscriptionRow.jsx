@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Rss, MoreHorizontal, Edit3, Trash2 } from "lucide-react"
+import { Rss, MoreHorizontal, Edit3, Trash2, CheckCircle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
-export default function SubscriptionRow({ subscription, onEdit, onDelete }) {
+export default function SubscriptionRow({ subscription, onEdit, onDelete, isCreator }) {
   const [showMenu, setShowMenu] = useState(false)
   const menuRef = useRef(null)
 
@@ -41,42 +41,57 @@ export default function SubscriptionRow({ subscription, onEdit, onDelete }) {
           </div>
         </div>
 
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowMenu(!showMenu)
-            }}
-            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-opacity"
-          >
-            <MoreHorizontal className="h-3 w-3" />
-          </button>
+        <div className="flex items-center gap-2">
+          {subscription.isOwned ? (
+            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+              <CheckCircle className="h-3.5 w-3.5" />
+              <span>Owned</span>
+            </div>
+          ) : (
+            <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              {parseFloat(subscription.price).toFixed(2)} MATIC
+            </div>
+          )}
 
-          <AnimatePresence>
-            {showMenu && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 z-[100]"
+          {isCreator && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowMenu(!showMenu)
+                }}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-opacity"
               >
-                <button
-                  onClick={handleEdit}
-                  className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
-                >
-                  <Edit3 className="h-3 w-3" />
-                  Edit
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Delete
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <MoreHorizontal className="h-3 w-3" />
+              </button>
+
+              <AnimatePresence>
+                {showMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 z-[100]"
+                  >
+                    <button
+                      onClick={handleEdit}
+                      className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Delete
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
     </div>

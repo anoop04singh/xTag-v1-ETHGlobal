@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
 import { Prisma } from '@prisma/client';
 
-// GET user's own subscriptions
+// GET all subscriptions for discovery, and user's own for management
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -12,11 +12,26 @@ export async function GET(request: NextRequest) {
     }
 
     const subscriptions = await prisma.subscription.findMany({
-      where: { creatorId: user.id },
       orderBy: { createdAt: 'desc' },
+      include: {
+        creator: {
+          select: { id: true, smartAccountAddress: true }
+        }
+      }
     });
 
-    return NextResponse.json(subscriptions);
+    const purchases = await prisma.purchase.findMany({
+        where: { userId: user.id },
+        select: { subscriptionId: true }
+    });
+    const purchasedIds = new Set(purchases.map(p => p.subscriptionId));
+
+    const subscriptionsWithOwnership = subscriptions.map(sub => ({
+        ...sub,
+        isOwned: purchasedIds.has(sub.id) || sub.creatorId === user.id
+    }));
+
+    return NextResponse.json(subscriptionsWithOwnership);
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
