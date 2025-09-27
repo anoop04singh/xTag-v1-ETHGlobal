@@ -10,8 +10,8 @@ type ProtectedHandler = (
 ) => Promise<NextResponse | Response>;
 
 export function withX402Protection(handler: ProtectedHandler) {
-  return async function (req: NextRequest, context: { params: { id: string } }) {
-    const subscriptionId = context.params.id;
+  return async function (req: NextRequest, { params }: { params: { id: string } }) {
+    const subscriptionId = params.id;
     console.log(`\n--- [x402 Middleware] New Request for Subscription ID: ${subscriptionId} ---`);
 
     try {
@@ -32,22 +32,19 @@ export function withX402Protection(handler: ProtectedHandler) {
         return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
       }
 
-      // Check 1: Is the user the creator?
       if (user.id === subscription.creatorId) {
         console.log(`[x402 Middleware] Access granted: User is the creator.`);
-        return handler(req, context, { user, subscription });
+        return handler(req, { params }, { user, subscription });
       }
 
-      // Check 2: Has the user already purchased?
       const purchase = await prisma.purchase.findUnique({
         where: { userId_subscriptionId: { userId: user.id, subscriptionId } },
       });
       if (purchase) {
         console.log(`[x402 Middleware] Access granted: User has a previous purchase record.`);
-        return handler(req, context, { user, subscription });
+        return handler(req, { params }, { user, subscription });
       }
 
-      // Check 3: Is there a payment header?
       const paymentHeader = req.headers.get('x-payment');
       if (paymentHeader) {
         console.log("[x402 Middleware] X-PAYMENT header found. Attempting to verify and settle...");
@@ -79,22 +76,29 @@ export function withX402Protection(handler: ProtectedHandler) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bodyForFacilitator),
             });
-            const verifyResult = await verifyRes.json();
-            console.log(`[x402 Middleware] Facilitator /verify responded with status ${verifyRes.status}`, verifyResult);
 
-            if (verifyRes.ok && verifyResult.isValid) {
-                console.log("[x402 Middleware] Verification successful. Calling /settle...");
-                const settleRes = await fetch(`${facilitatorUrl}/settle`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(bodyForFacilitator),
-                });
-                const settleResult = await settleRes.json();
-                console.log(`[x402 Middleware] Facilitator /settle responded with status ${settleRes.status}`, settleResult);
+            let verifyResult;
+            if (!verifyRes.ok) {
+                const errorText = await verifyRes.text();
+                console.error(`[x402 Middleware] Facilitator /verify returned an error. Status: ${verifyRes.status}. Body: ${errorText}`);
+            } else {
+                verifyResult = await verifyRes.json();
+                console.log(`[x402 Middleware] Facilitator /verify responded with status ${verifyRes.status}`, verifyResult);
 
-                if (settleRes.ok && settleResult.success) {
-                    console.log(`[x402 Middleware] Settlement successful. TxHash: ${settleResult.txHash}. Granting access.`);
-                    return handler(req, context, { user, subscription, txHash: settleResult.txHash });
+                if (verifyResult.isValid) {
+                    console.log("[x402 Middleware] Verification successful. Calling /settle...");
+                    const settleRes = await fetch(`${facilitatorUrl}/settle`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bodyForFacilitator),
+                    });
+                    const settleResult = await settleRes.json();
+                    console.log(`[x402 Middleware] Facilitator /settle responded with status ${settleRes.status}`, settleResult);
+
+                    if (settleRes.ok && settleResult.success) {
+                        console.log(`[x402 Middleware] Settlement successful. TxHash: ${settleResult.txHash}. Granting access.`);
+                        return handler(req, { params }, { user, subscription, txHash: settleResult.txHash });
+                    }
                 }
             }
         } catch (e) {
@@ -102,7 +106,6 @@ export function withX402Protection(handler: ProtectedHandler) {
         }
       }
 
-      // If all checks fail, return 402
       console.log(`[x402 Middleware] No valid access method. Returning 402 Payment Required.`);
       const paymentRequirements = {
         accepts: [{
