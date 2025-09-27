@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 interface User {
   id: string;
-  smartAccountAddress: string;
+  walletAddress: string;
 }
 
 interface AuthContextType {
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const payload = JSON.parse(atob(data.token.split('.')[1]));
-      const currentUser = { id: payload.id, smartAccountAddress: payload.smartAccountAddress };
+      const currentUser = { id: payload.id, walletAddress: payload.walletAddress };
 
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('authUser', JSON.stringify(currentUser));

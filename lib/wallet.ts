@@ -1,51 +1,18 @@
-import { createSmartAccountClient, type SmartAccountClientOptions } from "@biconomy/account";
 import { polygonAmoy } from "viem/chains";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { createWalletClient, http } from "viem";
 
-export async function createSmartAccount() {
-  console.log("[WALLET] Starting smart account creation...");
-  if (!process.env.BICONOMY_BUNDLER_URL) {
-    throw new Error("BICONOMY_BUNDLER_URL is not set in .env file");
-  }
-  if (!process.env.POLYGON_AMOY_RPC_URL) {
-    throw new Error("POLYGON_AMOY_RPC_URL is not set in .env file");
-  }
-
-  // 1. Generate a new private key for the signer
-  const signerPrivateKey = generatePrivateKey();
-  const signerAccount = privateKeyToAccount(signerPrivateKey);
-  console.log("[WALLET] New signer generated.");
-
-  // 2. Create a Viem WalletClient for the signer
-  const eoaWalletClient = createWalletClient({
-    account: signerAccount,
-    chain: polygonAmoy,
-    transport: http(process.env.POLYGON_AMOY_RPC_URL),
-  });
-
-  // 3. Create the Biconomy Smart Account config using the WalletClient
-  const config: SmartAccountClientOptions = {
-    signer: eoaWalletClient, // This is the corrected part
-    bundlerUrl: process.env.BICONOMY_BUNDLER_URL,
-    rpcUrl: process.env.POLYGON_AMOY_RPC_URL,
-    chainId: polygonAmoy.id,
-  };
-  console.log("[WALLET] Biconomy Paymaster is disabled. Gas fees will be paid by the smart wallet.");
-
-  console.log("[WALLET] Creating Biconomy smart account client with config:", {
-    ...config,
-    signer: 'WalletClient object provided',
-  });
-
-  const biconomySmartAccount = await createSmartAccountClient(config);
-
-  // 4. Get the smart account address
-  const smartAccountAddress = await biconomySmartAccount.getAccountAddress();
-  console.log(`[WALLET] Smart account address generated: ${smartAccountAddress}`);
+export async function createWallet() {
+  console.log("[WALLET] Starting standard EOA wallet creation...");
+  
+  // Generate a new private key and derive the account
+  const privateKey = generatePrivateKey();
+  const account = privateKeyToAccount(privateKey);
+  
+  const walletAddress = account.address;
+  console.log(`[WALLET] Standard EOA wallet address generated: ${walletAddress}`);
 
   return {
-    signerPrivateKey,
-    smartAccountAddress,
+    signerPrivateKey: privateKey,
+    walletAddress: walletAddress,
   };
 }

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       transport: http(process.env.POLYGON_AMOY_RPC_URL),
     });
 
-    const smartAccountAddress = user.smartAccountAddress as `0x${string}`;
+    const walletAddress = user.walletAddress as `0x${string}`;
     const usdcContractAddress = process.env.USDC_CONTRACT_ADDRESS as `0x${string}`;
 
     if (!usdcContractAddress) {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch MATIC balance
-    const maticBalanceBigInt = await publicClient.getBalance({ address: smartAccountAddress });
+    const maticBalanceBigInt = await publicClient.getBalance({ address: walletAddress });
     const maticBalance = formatUnits(maticBalanceBigInt, 18);
 
     // Fetch USDC balance
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       address: usdcContractAddress,
       abi: usdcContractABI,
       functionName: 'balanceOf',
-      args: [smartAccountAddress],
+      args: [walletAddress],
     });
     
     const usdcDecimals = await publicClient.readContract({
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const usdcBalance = formatUnits(usdcBalanceBigInt, usdcDecimals);
 
     return NextResponse.json({
-      smartAccountAddress,
+      walletAddress,
       maticBalance: parseFloat(maticBalance).toFixed(4),
       usdcBalance: parseFloat(usdcBalance).toFixed(2),
     });

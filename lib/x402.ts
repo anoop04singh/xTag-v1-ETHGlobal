@@ -1,10 +1,9 @@
 import { wrapFetchWithPayment } from 'x402-fetch';
 import { privateKeyToAccount } from 'viem/accounts';
-import { createSmartAccountClient, type SmartAccountClientOptions } from "@biconomy/account";
 import { polygonAmoy } from "viem/chains";
 import { decrypt } from './encryption';
 import { prisma } from './db';
-import { type WalletClient, createWalletClient, http } from 'viem';
+import { createWalletClient, http } from 'viem';
 
 export async function makePaidRequest(userId: string, relativeUrl: string, userToken: string) {
   const fullUrl = `${process.env.NEXT_PUBLIC_APP_URL}${relativeUrl}`;
@@ -14,64 +13,21 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   if (!user) throw new Error('User not found');
 
   const privateKey = decrypt(user.encryptedSignerKey);
-  const signerAccount = privateKeyToAccount(privateKey as `0x${string}`);
-  console.log(`[x402] Decrypted private key for EOA owner: ${signerAccount.address}`);
+  const account = privateKeyToAccount(privateKey as `0x${string}`);
+  console.log(`[x402] Decrypted private key for wallet: ${account.address}`);
 
-  // 1. Create a standard Viem WalletClient for the EOA signer (the owner of the smart account)
-  const eoaWalletClient = createWalletClient({
-    account: signerAccount,
+  // Create a standard Viem WalletClient. This is much simpler.
+  const walletClient = createWalletClient({
+    account,
     chain: polygonAmoy,
     transport: http(process.env.POLYGON_AMOY_RPC_URL!),
   });
+  console.log(`[x402] Standard viem WalletClient created for address: ${walletClient.account.address}`);
 
-  // 2. Create the Biconomy Smart Account client without the Paymaster
-  const config: SmartAccountClientOptions = {
-    signer: eoaWalletClient,
-    bundlerUrl: process.env.BICONOMY_BUNDLER_URL!,
-    rpcUrl: process.env.POLYGON_AMOY_RPC_URL!,
-    chainId: polygonAmoy.id,
-  };
-  const biconomySmartAccount = await createSmartAccountClient(config);
-  console.log(`[x402] Biconomy client created for smart wallet: ${biconomySmartAccount.account.address}`);
-
-  // 3. Create a hybrid adapter that satisfies the x402-fetch library's requirements
-  const walletClientAdapter = {
-    // The account address MUST be the smart account's address
-    account: {
-      address: user.smartAccountAddress as `0x${string}`,
-      type: 'local' as const,
-    },
-    chain: polygonAmoy,
-    // Use the Biconomy client for sending transactions
-    sendTransaction: biconomySmartAccount.sendTransaction.bind(biconomySmartAccount),
-    // Use the standard EOA client for signing, as the owner's signature is what's needed for EIP-1271 validation
-    signTypedData: eoaWalletClient.signTypedData.bind(eoaWalletClient),
-    
-    // Add dummy properties and functions to satisfy the WalletClient type
-    key: 'biconomy-hybrid-adapter',
-    type: 'biconomy-hybrid-adapter',
-    transport: { key: 'http', name: 'HTTP JSON-RPC', type: 'http', retryCount: 0, retryDelay: 150, timeout: 10000 },
-    writeContract: () => { throw new Error('writeContract not implemented on adapter'); },
-    addChain: () => { throw new Error('addChain not implemented on adapter'); },
-    deployContract: () => { throw new Error('deployContract not implemented on adapter'); },
-    getAddresses: async () => Promise.resolve([user.smartAccountAddress as `0x${string}`]),
-    getChainId: async () => Promise.resolve(polygonAmoy.id),
-    getPermissions: () => { throw new Error('getPermissions not implemented on adapter'); },
-    requestAddresses: () => { throw new Error('requestAddresses not implemented on adapter'); },
-    requestPermissions: () => { throw new Error('requestPermissions not implemented on adapter'); },
-    signMessage: eoaWalletClient.signMessage.bind(eoaWalletClient),
-    switchChain: () => { throw new Error('switchChain not implemented on adapter'); },
-    watchAsset: () => { throw new Error('watchAsset not implemented on adapter'); },
-    sendRawTransaction: () => { throw new Error('sendRawTransaction not implemented on adapter'); },
-    signTransaction: () => { throw new Error('signTransaction not implemented on adapter'); },
-    call: () => { throw new Error('call not implemented on adapter'); },
-    estimateGas: () => { throw new Error('estimateGas not implemented on adapter'); },
-  } as unknown as WalletClient;
-
-  const fetchWithPayment = wrapFetchWithPayment(fetch, walletClientAdapter, {
+  const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient, {
     facilitatorUrl: process.env.X402_FACILITATOR_URL,
   });
-  console.log(`[x402] Fetch wrapped with Biconomy hybrid adapter and facilitator: ${process.env.X402_FACILITATOR_URL}`);
+  console.log(`[x402] Fetch wrapped with standard WalletClient and facilitator: ${process.env.X402_FACILITATOR_URL}`);
 
   try {
     const response = await fetchWithPayment(fullUrl, {

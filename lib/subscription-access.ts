@@ -45,7 +45,7 @@ export async function getSubscriptionAccess(userId: string, subscriptionId: stri
     resource: resourceUrl,
     description: `Premium content: ${subscription.name}`,
     mimeType: 'application/json',
-    payTo: subscription.creator.smartAccountAddress,
+    payTo: subscription.creator.walletAddress,
     maxAmountRequired: amountInSmallestUnit.toString(),
     maxTimeoutSeconds: 300,
     // Use the actual contract address from environment variables

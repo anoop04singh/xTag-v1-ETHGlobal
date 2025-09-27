@@ -33,8 +33,8 @@ export default function WalletInfo() {
   }, [token]);
 
   const handleCopy = () => {
-    if (balance?.smartAccountAddress) {
-      navigator.clipboard.writeText(balance.smartAccountAddress);
+    if (balance?.walletAddress) {
+      navigator.clipboard.writeText(balance.walletAddress);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -63,7 +63,7 @@ export default function WalletInfo() {
                     <div className="flex items-center justify-between">
                         <span className="text-zinc-500 dark:text-zinc-400">Address</span>
                         <div className="flex items-center gap-1 font-mono">
-                            <span>{`${balance.smartAccountAddress.substring(0, 6)}...${balance.smartAccountAddress.substring(balance.smartAccountAddress.length - 4)}`}</span>
+                            <span>{`${balance.walletAddress.substring(0, 6)}...${balance.walletAddress.substring(balance.walletAddress.length - 4)}`}</span>
                             <button onClick={handleCopy} title="Copy Address">
                                 <Copy className="h-3 w-3" />
                             </button>

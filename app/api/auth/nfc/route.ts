@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { createSmartAccount } from '@/lib/wallet';
+import { createWallet } from '@/lib/wallet';
 import { encrypt } from '@/lib/encryption';
 import { createToken } from '@/lib/auth';
 
@@ -22,14 +22,14 @@ export async function POST(request: Request) {
     // If user exists, it's a login
     if (user) {
       console.log(`[NFC AUTH API] Existing user found: ${user.id}. Generating login token.`);
-      const token = createToken({ id: user.id, smartAccountAddress: user.smartAccountAddress });
+      const token = createToken({ id: user.id, walletAddress: user.walletAddress });
       console.log("[NFC AUTH API] Login successful.");
       return NextResponse.json({ message: 'Login successful', token, isNewUser: false });
     }
 
     // If user does not exist, it's a signup
     console.log('[NFC AUTH API] New user detected. Starting signup process...');
-    const { signerPrivateKey, smartAccountAddress } = await createSmartAccount();
+    const { signerPrivateKey, walletAddress } = await createWallet();
     
     console.log(`[NFC AUTH API] Encrypting private key for storage...`);
     const encryptedSignerKey = encrypt(signerPrivateKey);
@@ -38,19 +38,19 @@ export async function POST(request: Request) {
     user = await prisma.user.create({
       data: {
         nfcId,
-        smartAccountAddress,
+        walletAddress,
         encryptedSignerKey,
       },
     });
     console.log(`[NFC AUTH API] New user created with ID: ${user.id}`);
 
-    const token = createToken({ id: user.id, smartAccountAddress: user.smartAccountAddress });
+    const token = createToken({ id: user.id, walletAddress: user.walletAddress });
     console.log("[NFC AUTH API] Signup successful, token generated.");
 
     return NextResponse.json({
-      message: 'Signup successful, smart account created',
+      message: 'Signup successful, wallet created',
       token,
-      smartAccountAddress,
+      walletAddress,
       isNewUser: true,
     }, { status: 201 });
 

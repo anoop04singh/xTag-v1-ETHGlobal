@@ -417,11 +417,11 @@ export default function Sidebar({
               {user && (
                 <div className="mt-2 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60">
                   <div className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">
-                    {user.smartAccountAddress.substring(0, 2)}
+                    {user.walletAddress.substring(0, 2)}
                   </div>
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium" title={user.smartAccountAddress}>
-                      {`${user.smartAccountAddress.substring(0, 6)}...${user.smartAccountAddress.substring(user.smartAccountAddress.length - 4)}`}
+                    <div className="truncate text-sm font-medium" title={user.walletAddress}>
+                      {`${user.walletAddress.substring(0, 6)}...${user.walletAddress.substring(user.walletAddress.length - 4)}`}
                     </div>
                     <button onClick={logout} className="truncate text-xs text-zinc-500 hover:underline dark:text-zinc-400">
                       Log out

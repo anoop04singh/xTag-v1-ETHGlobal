@@ -8,7 +8,7 @@ if (!secret) {
 
 interface UserPayload {
   id: string;
-  smartAccountAddress: string;
+  walletAddress: string;
 }
 
 export function createToken(user: UserPayload): string {
