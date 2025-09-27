@@ -50,25 +50,22 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
   if (paymentHeader) {
     console.log("[ACCESS LIB] X-PAYMENT header found. Attempting to verify and settle...");
     try {
-      const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
       const facilitatorUrl = 'https://facilitator.x402.rs';
 
-      // FIX: Construct the paymentPayload by adding x402Version to the entire decoded object.
-      const finalPaymentPayload = {
+      // FIX: Send the original base64 header and add x402Version at the root level, as per the spec.
+      const verifyPayload = {
         x402Version: 1,
-        ...decodedPayload,
+        paymentHeader: paymentHeader,
+        paymentRequirements: paymentRequirements.accepts[0],
       };
-      console.log("[ACCESS LIB] Final payload prepared for facilitator:", JSON.stringify(finalPaymentPayload));
+      console.log("[ACCESS LIB] Final payload prepared for facilitator:", JSON.stringify(verifyPayload));
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
       const verifyRes = await fetch(`${facilitatorUrl}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentPayload: finalPaymentPayload, 
-          paymentRequirements: paymentRequirements.accepts[0],
-        }),
+        body: JSON.stringify(verifyPayload),
       });
       
       if (!verifyRes.ok) {
@@ -80,14 +77,18 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
           console.log("[ACCESS LIB] Facilitator verification failed:", verifyResult.invalidReason || 'Unknown reason');
         } else {
           console.log("[ACCESS LIB] Verification successful. Calling facilitator /settle endpoint...");
+          
           // Step 2: Settle the payment
+          const settlePayload = {
+            x402Version: 1,
+            paymentHeader: paymentHeader,
+            paymentRequirements: paymentRequirements.accepts[0],
+          };
+
           const settleRes = await fetch(`${facilitatorUrl}/settle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentPayload: finalPaymentPayload,
-              paymentRequirements: paymentRequirements.accepts[0],
-            }),
+            body: JSON.stringify(settlePayload),
           });
           const settleResult = await settleRes.json();
 
