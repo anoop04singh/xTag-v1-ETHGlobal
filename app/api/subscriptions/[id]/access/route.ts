@@ -3,23 +3,34 @@ import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const subscriptionId = params.id;
+  console.log(`[ACCESS API] Received request for subscription ID: ${subscriptionId}`);
+
   try {
     const user = await getCurrentUser(request);
     if (!user) {
+      console.log('[ACCESS API] Unauthorized: No user found for token.');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    console.log(`[ACCESS API] Authenticated user: ${user.id}`);
 
-    const subscriptionId = params.id;
     const subscription = await prisma.subscription.findUnique({
       where: { id: subscriptionId },
       include: { creator: true },
     });
 
     if (!subscription) {
+      console.log(`[ACCESS API] Subscription not found: ${subscriptionId}`);
       return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
     }
 
-    // Check if the user has already purchased this subscription or is the creator
+    // Check if the user is the creator
+    if (user.id === subscription.creatorId) {
+      console.log(`[ACCESS API] Access granted: User is the creator of subscription "${subscription.name}".`);
+      return NextResponse.json({ prompt: subscription.prompt });
+    }
+
+    // Check if the user has already purchased this subscription
     const purchase = await prisma.purchase.findUnique({
       where: {
         userId_subscriptionId: {
@@ -29,12 +40,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       },
     });
 
-    if (purchase || user.id === subscription.creatorId) {
-      // User has access, return the premium content
+    if (purchase) {
+      console.log(`[ACCESS API] Access granted: User has a previous purchase record for subscription "${subscription.name}".`);
       return NextResponse.json({ prompt: subscription.prompt });
     }
 
     // User does not have access, return 402 Payment Required
+    console.log(`[ACCESS API] Access denied for user ${user.id}. Returning 402 Payment Required.`);
     const paymentRequirements = {
       accepts: [{
         scheme: 'exact',
@@ -49,6 +61,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         },
       }],
     };
+    console.log('[ACCESS API] Sending 402 with details:', paymentRequirements);
 
     return new Response(JSON.stringify(paymentRequirements), {
       status: 402,
@@ -58,7 +71,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     });
 
   } catch (error) {
-    console.error('Error accessing subscription:', error);
+    console.error(`[ACCESS API] Error accessing subscription ${subscriptionId}:`, error);
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
   }
 }
