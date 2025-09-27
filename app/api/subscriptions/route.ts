@@ -63,4 +63,3 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newSubscription, { status: 201 });
   }
-};
