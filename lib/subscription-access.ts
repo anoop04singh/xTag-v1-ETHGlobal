@@ -53,12 +53,12 @@ export async function getSubscriptionAccess(req: NextRequest, userId: string, su
       const decodedPayload = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf-8'));
       const facilitatorUrl = 'https://x402.polygon.technology';
 
-      // FIX: As per the error log, ensure the x402Version is present in the payload.
+      // FIX: Ensure x402Version is present and is a number (u8).
       const payloadWithVersion = {
         ...decodedPayload,
-        x402Version: decodedPayload.x402Version || "1.0",
+        x402Version: decodedPayload.x402Version || 1,
       };
-      console.log("[ACCESS LIB] Ensured x402Version is present in payload.");
+      console.log("[ACCESS LIB] Ensured x402Version is present in payload as a number.");
 
       // Step 1: Verify the payment payload
       console.log("[ACCESS LIB] Calling facilitator /verify endpoint...");
