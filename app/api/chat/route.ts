@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const { conversationId, message } = await request.json();
     if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
 
-    // --- Command Handling ---
+    // --- Command Handling: This is now the exclusive, transactional trigger ---
     const runMatch = message.match(/run\s+"([^"]+)"/i);
     if (runMatch) {
         const subName = runMatch[1];
@@ -59,10 +59,16 @@ export async function POST(request: NextRequest) {
         }
 
         try {
+            // This function now encapsulates the entire x402 flow.
+            // It will attempt to access the resource. If it receives a 402, it will
+            // handle the on-chain payment and retry. If the wallet has insufficient
+            // funds, it will throw an error, which is caught below.
             const { data, txHash } = await makePaidRequest(user.id, `/api/subscriptions/${subscription.id}/access`, userToken);
             
             const purchase = await prisma.purchase.findUnique({ where: { userId_subscriptionId: { userId: user.id, subscriptionId: subscription.id } } });
             let wasNewPurchase = false;
+
+            // The presence of a txHash is our cryptographic proof of a new, successful on-chain transaction.
             if (!purchase && txHash) {
                 await prisma.purchase.create({ data: { userId: user.id, subscriptionId: subscription.id, txHash } });
                 wasNewPurchase = true;
@@ -90,7 +96,7 @@ export async function POST(request: NextRequest) {
         }
     }
 
-    // --- Standard Chat Flow ---
+    // --- Standard Chat Flow (No 'run' command detected) ---
     let conversation;
     let isNewConversation = false;
 
