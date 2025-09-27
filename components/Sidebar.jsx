@@ -13,6 +13,7 @@ import ConversationRow from "./ConversationRow"
 import ThemeToggle from "./ThemeToggle"
 import { cls } from "./utils"
 import { useAuth } from "../context/AuthContext"
+import WalletInfo from "./WalletInfo"
 
 export default function Sidebar({
   open,
@@ -30,7 +31,7 @@ export default function Sidebar({
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
 }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   if (sidebarCollapsed) {
     return (
@@ -184,21 +185,7 @@ export default function Sidebar({
                   <ThemeToggle theme={theme} setTheme={setTheme} />
                 </div>
               </div>
-              {user && (
-                <div className="mt-2 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60">
-                  <div className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">
-                    {user.walletAddress.substring(0, 2)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium" title={user.walletAddress}>
-                      {`${user.walletAddress.substring(0, 6)}...${user.walletAddress.substring(user.walletAddress.length - 4)}`}
-                    </div>
-                    <button onClick={logout} className="truncate text-xs text-zinc-500 hover:underline dark:text-zinc-400">
-                      Log out
-                    </button>
-                  </div>
-                </div>
-              )}
+              {user && <WalletInfo />}
             </div>
           </motion.aside>
         )}
