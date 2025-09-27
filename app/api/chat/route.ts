@@ -8,17 +8,17 @@ import { Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { withPaymentInterceptor, decodeXPaymentResponse } from 'x402-axios';
 
-const PAID_RESOURCE_BASE_URL = 'http://localhost:4020';
-const PAID_RESOURCE_PATH = '/get-data';
+const PAID_RESOURCE_BASE_URL = 'https://x402-server-updated.vercel.app';
 
 async function getAIContext(): Promise<string> {
-    return `You are an AI assistant. You have access to one special command that provides data.
-- To use the command, the user must type: run "get-data"
-- If the user asks what you can do, or how to get data, you MUST inform them to use the command: run "get-data".
-- Do not make up other commands. This is the only one.`;
+    return `You are an AI assistant. You have access to special commands that provide data.
+- To use a command, the user must type: run "command-name"
+- Available commands: "get-data", "nft-metadata", "trading-signals", "documentation".
+- If the user asks what you can do, or how to get data, you MUST inform them about these commands.
+- Do not make up other commands. These are the only ones.`;
 }
 
-async function handlePaidRequest(userId: string) {
+async function handlePaidRequest(userId: string, command: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
         throw new Error('User not found for paid request.');
@@ -30,19 +30,20 @@ async function handlePaidRequest(userId: string) {
 
     const retries = 2;
     const delay = 1000;
+    const path = `/api/${command}`;
 
     for (let i = 0; i <= retries; i++) {
         try {
-            console.log(`[CHAT API] Making paid request, attempt ${i + 1}/${retries + 1}`);
-            const response = await api.get(PAID_RESOURCE_PATH);
+            console.log(`[CHAT API] Making paid request to ${path}, attempt ${i + 1}/${retries + 1}`);
+            const response = await api.get(path);
             
             const paymentResponse = response.headers['x-payment-response'] 
                 ? decodeXPaymentResponse(response.headers['x-payment-response'])
                 : null;
 
-            let content = `Successfully fetched data: ${JSON.stringify(response.data)}`;
+            let content = `Successfully fetched data from "${command}":\n\n\`\`\`json\n${JSON.stringify(response.data, null, 2)}\n\`\`\``;
             if (paymentResponse) {
-                content += `\n\nPayment Details:\nTransaction Hash: ${paymentResponse.transaction}`;
+                content += `\n\n**Payment Details:**\nTransaction Hash: \`${paymentResponse.transaction}\``;
             } else {
                 content += `\n\n(Access was granted without a new payment, you may already have access).`;
             }
@@ -83,9 +84,13 @@ export async function POST(request: NextRequest) {
 
     let responseContent: string;
 
-    if (message.trim().toLowerCase() === 'run "get-data"') {
+    const commandMatch = message.trim().toLowerCase().match(/^run "([^"]+)"$/);
+    const validCommands = ["get-data", "nft-metadata", "trading-signals", "documentation"];
+
+    if (commandMatch && validCommands.includes(commandMatch[1])) {
+        const command = commandMatch[1];
         try {
-            responseContent = await handlePaidRequest(user.id);
+            responseContent = await handlePaidRequest(user.id, command);
         } catch (error: any) {
             responseContent = `Error: ${error.message}`;
         }

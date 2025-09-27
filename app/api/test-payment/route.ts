@@ -7,8 +7,7 @@ import { Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { withPaymentInterceptor, decodeXPaymentResponse } from 'x402-axios';
 
-const PAID_RESOURCE_BASE_URL = 'http://localhost:4020';
-const PAID_RESOURCE_PATH = '/get-data';
+const PAID_RESOURCE_BASE_URL = 'https://x402-server-updated.vercel.app';
 
 export async function POST(request: NextRequest) {
   console.log("\n--- [TEST PAYMENT API] New Request ---");
@@ -17,6 +16,12 @@ export async function POST(request: NextRequest) {
     if (!user) {
       console.log("[TEST PAYMENT API] Error: Unauthorized");
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { path } = await request.json();
+    const validPaths = ['/api/get-data', '/api/nft-metadata', '/api/trading-signals', '/api/documentation'];
+    if (!path || !validPaths.includes(path)) {
+        return NextResponse.json({ error: 'Invalid or missing path provided' }, { status: 400 });
     }
 
     console.log(`[TEST PAYMENT API] User found: ${user.id}`);
@@ -32,8 +37,8 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i <= retries; i++) {
       try {
-        console.log(`[TEST PAYMENT API] Making paid request, attempt ${i + 1}/${retries + 1}`);
-        response = await api.get(PAID_RESOURCE_PATH);
+        console.log(`[TEST PAYMENT API] Making paid request to ${path}, attempt ${i + 1}/${retries + 1}`);
+        response = await api.get(path);
         break; // Success, exit loop
       } catch (error: any) {
         console.error(`[TEST PAYMENT API] Attempt ${i + 1} failed:`, error.response?.data || error.message);

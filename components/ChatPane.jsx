@@ -41,7 +41,7 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">How can I help you today?</h2>
               <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                Try the command <code className="font-mono bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-0.5">run "get-data"</code> to test the payment flow.
+                Try commands like <code className="font-mono bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-0.5">run "nft-metadata"</code> or <code className="font-mono bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-0.5">run "trading-signals"</code> to test the payment flow.
               </p>
             </div>
           </div>
