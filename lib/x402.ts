@@ -20,7 +20,7 @@ export async function makePaidRequest(userId: string, relativeUrl: string, userT
   const axiosWithPayment = withPaymentInterceptor(
     axiosInstance, 
     account,
-    (requirements) => requirements[0] // Explicitly provide a selector function
+    (response) => response.data.accepts[0] // Correctly select the payment requirements from the response data
   );
   console.log(`[x402-axios] Axios wrapped with payment interceptor and a selector.`);
 
