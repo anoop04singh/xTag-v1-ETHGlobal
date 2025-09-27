@@ -1,13 +1,10 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 model User {
@@ -18,15 +15,15 @@ model User {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   conversations       Conversation[]
-  subscriptions       Subscription[] @relation("CreatorSubscriptions")
+  createdSubscriptions Subscription[] @relation("Creator")
   purchases           Purchase[]
 }
 
 model Conversation {
   id        String    @id @default(cuid())
   title     String
-  userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -36,20 +33,20 @@ model Message {
   id             String       @id @default(cuid())
   role           String // "user" or "assistant"
   content        String       @db.Text
-  conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
   createdAt      DateTime     @default(now())
 }
 
 model Subscription {
   id          String     @id @default(cuid())
   name        String
-  description String
+  description String     @db.Text
   prompt      String     @db.Text
-  price       Decimal    @db.Decimal(18, 6)
-  currency    String     @default("USDC")
+  price       Decimal    @db.Decimal(18, 6) @default(0.0)
+  currency    String     @default("MATIC")
+  creator     User       @relation("Creator", fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId   String
-  creator     User       @relation("CreatorSubscriptions", fields: [creatorId], references: [id], onDelete: Cascade)
   purchases   Purchase[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -57,12 +54,12 @@ model Subscription {
 
 model Purchase {
   id             String       @id @default(cuid())
-  userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscriptionId String
+  userId         String
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  txHash         String?
+  subscriptionId String
   createdAt      DateTime     @default(now())
+  txHash         String?
 
   @@unique([userId, subscriptionId])
 }

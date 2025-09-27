@@ -105,16 +105,16 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onCreateSubsc
                 </div>
                  <div>
                   <label htmlFor="subPrice" className="block text-sm font-medium mb-2">
-                    Price (USDC)
+                    Price (MATIC)
                   </label>
                   <input
                     id="subPrice"
                     type="number"
-                    step="0.01"
+                    step="0.000001"
                     min="0"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="e.g., 1.50"
+                    placeholder="e.g., 1.5"
                     className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
                   />
                 </div>

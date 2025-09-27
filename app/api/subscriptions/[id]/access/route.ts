@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/currentUser';
-import { getSubscriptionAccess } from '@/lib/subscription-access';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -10,20 +10,55 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const subscriptionId = params.id;
-    const result = await getSubscriptionAccess(user.id, subscriptionId);
+    const subscription = await prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      include: { creator: true },
+    });
 
-    if (result.access) {
-      return NextResponse.json({ prompt: result.prompt });
-    } else if (result.status === 402) {
-      return new Response(JSON.stringify(result.paymentRequirements), {
-        status: 402,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } else {
-      return NextResponse.json({ error: result.error }, { status: result.status || 500 });
+    if (!subscription) {
+      return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
     }
+
+    // Check if the user has already purchased this subscription or is the creator
+    const purchase = await prisma.purchase.findUnique({
+      where: {
+        userId_subscriptionId: {
+          userId: user.id,
+          subscriptionId: subscriptionId,
+        },
+      },
+    });
+
+    if (purchase || user.id === subscription.creatorId) {
+      // User has access, return the premium content
+      return NextResponse.json({ prompt: subscription.prompt });
+    }
+
+    // User does not have access, return 402 Payment Required
+    const paymentRequirements = {
+      accepts: [{
+        scheme: 'exact',
+        network: 'polygon-amoy',
+        asset: 'usdc',
+        payTo: subscription.creator.smartAccountAddress,
+        maxAmountRequired: subscription.price.toString(),
+        maxTimeoutSeconds: 300,
+        extra: {
+          name: subscription.name,
+          description: subscription.description,
+        },
+      }],
+    };
+
+    return new Response(JSON.stringify(paymentRequirements), {
+      status: 402,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
   } catch (error) {
-    console.error(`[ACCESS API] Error accessing subscription ${params.id}:`, error);
+    console.error('Error accessing subscription:', error);
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
   }
 }
