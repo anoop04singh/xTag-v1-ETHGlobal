@@ -2,8 +2,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/currentUser';
 import { getSubscriptionAccess } from '@/lib/subscription-access';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const subscriptionId = params.id;
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  const { id: subscriptionId } = context.params;
   console.log(`\n--- [ACCESS API] New Request for Subscription ID: ${subscriptionId} ---`);
   try {
     const user = await getCurrentUser(request);
