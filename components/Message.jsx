@@ -1,5 +1,7 @@
 import { cls } from "./utils"
 import ActionConfirmation from "./ActionConfirmation";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function Message({ role, children, actionCommand, onActionConfirm }) {
   const isUser = role === "user"
@@ -12,13 +14,15 @@ export default function Message({ role, children, actionCommand, onActionConfirm
       )}
       <div
         className={cls(
-          "max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm",
+          "prose prose-sm dark:prose-invert max-w-[80%] rounded-2xl px-3 py-2 shadow-sm",
           isUser
-            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 prose-p:text-white dark:prose-p:text-zinc-900"
             : "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800",
         )}
       >
-        {children}
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {children}
+        </ReactMarkdown>
         {actionCommand && role === 'assistant' && (
           <ActionConfirmation command={actionCommand} onConfirm={onActionConfirm} />
         )}
