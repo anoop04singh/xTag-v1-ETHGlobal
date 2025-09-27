@@ -134,6 +134,17 @@ const Composer = forwardRef(function Composer({ onSend, busy }, ref) {
         </kbd>{" "}
         for newline
       </div>
+      <footer className="mx-auto mt-2 max-w-3xl text-center text-sm text-zinc-500 dark:text-zinc-400">
+        Made with ❤️ by{' '}
+        <a
+            href="https://github.com/anoop04singh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:underline text-zinc-700 dark:text-zinc-300"
+        >
+            0xanoop
+        </a>
+      </footer>
     </div>
   )
 })
