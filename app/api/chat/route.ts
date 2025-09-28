@@ -167,7 +167,7 @@ async function handlePaidRequest(userId: string, command: string, args: Record<s
 
             if (paymentResponse) {
                 const txHash = paymentResponse.transaction;
-                const explorerUrl = `https://www.oklink.com/amoy/tx/${txHash}`;
+                const explorerUrl = `https://amoy.polygonscan.com/tx/${txHash}`;
                 const shortTxHash = `${txHash.substring(0, 8)}...${txHash.substring(txHash.length - 6)}`;
                 content += `\n\n---\n**Payment Details:**\n*Transaction Hash:* [${shortTxHash}](${explorerUrl})`;
             } else if (command !== 'nft-metadata') {
