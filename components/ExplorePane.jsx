@@ -40,7 +40,7 @@ export default function ExplorePane() {
         <p className="text-zinc-500 dark:text-zinc-400 mb-8">
           Discover the paid resources available through the AI assistant. Use the provided commands in the chat to access them.
         </p>
-        <div className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {endpoints.map((endpoint) => (
             <Card key={endpoint.name} className={endpoint.highlight ? "border-blue-500/50 dark:border-blue-500/30 ring-2 ring-blue-500/20" : ""}>
               <CardHeader>
