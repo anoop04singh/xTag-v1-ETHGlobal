@@ -107,13 +107,8 @@ function formatApiResponse(command: string, data: any, address?: string): string
             formattedContent += `**Token Portfolio for wallet \`${address}\` on Polygon:**\n`;
             if (data.balances && data.balances.data && Array.isArray(data.balances.data) && data.balances.data.length > 0) {
                 data.balances.data.forEach((token: any) => {
-                    const balanceValue = token.quantity / Math.pow(10, token.decimal);
-                    let balance: string;
-                    if (balanceValue > 0 && balanceValue < 0.0001) {
-                        balance = balanceValue.toPrecision(4);
-                    } else {
-                        balance = balanceValue.toFixed(4);
-                    }
+                    const balanceValue = token.quantity;
+                    const balance = parseFloat(balanceValue).toLocaleString();
 
                     let valueString = '';
                     if (token.value_in_usd) {
