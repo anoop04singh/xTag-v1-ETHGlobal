@@ -4,8 +4,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function MiniAppQRCode() {
-  // IMPORTANT: Replace this with your actual App ID from the Worldcoin Developer Portal
-  const appId = "app_dfbe55706a640c82dce839bb0ecae74d"; // Using the example ID from docs as a placeholder
+  // Your new Worldcoin Mini App ID
+  const appId = "app_c1f2f99ac2a42ab5b32f426bafe579d3";
 
   // The URL that will be encoded into the QR code
   const miniAppUrl = `https://world.org/mini-app?app_id=${appId}`;
@@ -24,7 +24,7 @@ export default function MiniAppQRCode() {
         </div>
         <div className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
           <p>
-            This QR code uses a placeholder App ID. To create your own, visit the{' '}
+            To create your own Mini App, visit the{' '}
             <a
               href="https://developer.worldcoin.org/"
               target="_blank"
