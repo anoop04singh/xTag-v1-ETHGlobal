@@ -1,9 +1,10 @@
 "use client";
+import MiniAppQRCode from './MiniAppQRCode';
 
 export default function AboutPane() {
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-8">
-      <div className="max-w-3xl mx-auto flex flex-col items-center text-center h-full justify-center">
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
         <div className="h-24 w-24 mb-6">
           <img src="/XtagLogoBK.png" alt="xTag Logo" className="h-24 w-24 dark:hidden" />
           <img src="/XtagLogoWh.png" alt="xTag Logo" className="h-24 w-24 hidden dark:block" />
@@ -15,6 +16,7 @@ export default function AboutPane() {
         <p className="text-zinc-600 dark:text-zinc-300 max-w-2xl">
           From fetching NFT metadata to checking wallet balances and accessing premium trading signals, xTag simplifies the decentralized world. Just chat with the assistant, and let it handle the rest.
         </p>
+        <MiniAppQRCode />
       </div>
     </div>
   );
