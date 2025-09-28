@@ -55,7 +55,7 @@ export default function ChatPane({ messages = [], onSend, isThinking, onPauseThi
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">How can I help you today?</h2>
               <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                Try asking for "trading signals" or "NFT info" to see the new smart agent in action.
+                Try asking for "what's in my wallet?" or "get info for an NFT" to see the smart agent in action.
               </p>
             </div>
           </div>
