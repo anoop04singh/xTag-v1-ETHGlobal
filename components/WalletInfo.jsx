@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Wallet, Copy, ExternalLink, RefreshCw, Eye, EyeOff, Check } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export default function WalletInfo() {
+export default function WalletInfo({ collapsed }) {
   const { token } = useAuth();
   const [balance, setBalance] = useState(null);
   const [privateKey, setPrivateKey] = useState(null);
@@ -56,6 +57,42 @@ export default function WalletInfo() {
       setTimeout(() => setCopiedKey(false), 2000);
     }
   };
+
+  if (collapsed) {
+    return (
+      <TooltipProvider delayDuration={0}>
+        <div className="px-2 py-3 flex flex-col items-center gap-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <Wallet className="h-5 w-5" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {loading ? <p>Loading wallet...</p> : balance ? (
+                <div className="text-xs space-y-1">
+                  <p className="font-semibold">Wallet Details</p>
+                  <p className="font-mono">{`${balance.walletAddress.substring(0, 6)}...${balance.walletAddress.substring(balance.walletAddress.length - 4)}`}</p>
+                  <p>USDC: {balance.usdcBalance}</p>
+                  <p>MATIC: {balance.maticBalance}</p>
+                </div>
+              ) : <p>Could not load wallet info.</p>}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={fetchWalletInfo} disabled={loading} className="p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50">
+                <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Refresh Wallet</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
+    );
+  }
 
   return (
     <div className="px-3 py-3">

@@ -19,13 +19,14 @@ export default function Sidebar({
 }) {
   const { user, logout } = useAuth();
 
+  // Collapsed view for desktop
   if (sidebarCollapsed) {
     return (
       <motion.aside
         initial={{ width: 320 }}
-        animate={{ width: 64 }}
+        animate={{ width: 80 }}
         transition={{ type: "spring", stiffness: 260, damping: 28 }}
-        className="z-50 flex h-full shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+        className="z-50 hidden h-full shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:flex"
       >
         <div className="flex items-center justify-center border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
           <button
@@ -37,10 +38,19 @@ export default function Sidebar({
             <PanelLeftOpen className="h-5 w-5" />
           </button>
         </div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {user && <WalletInfo collapsed={true} />}
+        </div>
+        <div className="mt-auto border-t border-zinc-200/60 dark:border-zinc-800">
+          <div className="flex items-center justify-center py-3">
+            <ThemeToggle theme={theme} setTheme={setTheme} collapsed={true} />
+          </div>
+        </div>
       </motion.aside>
-    )
+    );
   }
 
+  // Expanded view for desktop and mobile drawer
   return (
     <>
       <AnimatePresence>
@@ -67,6 +77,7 @@ export default function Sidebar({
             className={cls(
               "z-50 flex h-full w-80 shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900",
               "fixed inset-y-0 left-0 md:static md:translate-x-0",
+              sidebarCollapsed && "md:hidden" // Hide expanded view on desktop when collapsed
             )}
           >
             <div className="flex items-center gap-2 border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
@@ -98,7 +109,7 @@ export default function Sidebar({
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {user && <WalletInfo />}
+              {user && <WalletInfo collapsed={false} />}
             </div>
 
             <div className="border-t border-zinc-200/60 dark:border-zinc-800">
@@ -107,7 +118,7 @@ export default function Sidebar({
                   Log out
                 </button>
                 <div className="ml-auto">
-                  <ThemeToggle theme={theme} setTheme={setTheme} />
+                  <ThemeToggle theme={theme} setTheme={setTheme} collapsed={false} />
                 </div>
               </div>
             </div>
