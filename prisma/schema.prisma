@@ -1,10 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model User {
@@ -12,10 +12,16 @@ model User {
   nfcId              String @unique
   walletAddress      String @unique
   encryptedSignerKey String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model NfcTestMapping {
-  id         String @id @default(cuid())
-  nfcId      String @unique
-  privateKey String
+  id          String @id @default(cuid())
+  nfcId       String @unique
+  privateKey  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
