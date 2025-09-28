@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Nfc } from 'lucide-react';
+import { Nfc, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [nfcId, setNfcId] = useState('');
   const { login, loading, error } = useAuth();
   const [scanError, setScanError] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
+  const [nfcStatus, setNfcStatus] = useState<'idle' | 'scanning' | 'scanned'>('idle');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +23,7 @@ export default function LoginPage() {
       return;
     }
 
-    setIsScanning(true);
+    setNfcStatus('scanning');
     setScanError(null);
 
     try {
@@ -41,8 +41,8 @@ export default function LoginPage() {
 
             if (pk1) {
               console.log("NFC Scan successful, pk1 found:", pk1);
+              setNfcStatus('scanned');
               login(pk1);
-              setIsScanning(false);
             } else {
               throw new Error("Could not find 'pk1' parameter in the NFC data.");
             }
@@ -51,21 +51,23 @@ export default function LoginPage() {
           }
         } catch (err: any) {
           setScanError(err.message || "Failed to read NFC data.");
-          setIsScanning(false);
+          setNfcStatus('idle');
         }
       };
 
       reader.onerror = (event) => {
         console.error("NFC Reader Error:", event);
         setScanError("An error occurred while scanning. Please try again.");
-        setIsScanning(false);
+        setNfcStatus('idle');
       };
 
     } catch (err: any) {
       setScanError(err.message || "Could not start NFC scanning.");
-      setIsScanning(false);
+      setNfcStatus('idle');
     }
   };
+
+  const isNfcAuthenticating = nfcStatus === 'scanned' && loading;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4">
@@ -84,11 +86,16 @@ export default function LoginPage() {
         <div className="space-y-4">
           <button
             onClick={handleNfcScan}
-            disabled={loading || isScanning}
+            disabled={loading || nfcStatus === 'scanning'}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500 disabled:bg-blue-400 dark:bg-blue-500 dark:hover:bg-blue-400 dark:disabled:bg-blue-600 transition-colors"
           >
-            <Nfc className="h-5 w-5" />
-            {isScanning ? 'Ready to Scan...' : 'Scan NFC Tag'}
+            {isNfcAuthenticating ? (
+              <><Loader2 className="h-5 w-5 animate-spin" /> Authenticating...</>
+            ) : nfcStatus === 'scanning' ? (
+              <><Nfc className="h-5 w-5" /> Ready to Scan...</>
+            ) : (
+              <><Nfc className="h-5 w-5" /> Scan NFC Tag</>
+            )}
           </button>
 
           <div className="relative flex items-center py-2">
@@ -118,7 +125,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full mt-4 px-4 py-3 font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 disabled:bg-zinc-500 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 dark:disabled:bg-zinc-600 transition-colors"
             >
-              {loading ? 'Authenticating...' : 'Continue'}
+              {loading && nfcStatus !== 'scanned' ? 'Authenticating...' : 'Continue'}
             </button>
           </form>
 

@@ -17,83 +17,75 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'nfcId is required' }, { status: 400 });
     }
 
-    const testMapping = await prisma.nfcTestMapping.findUnique({
+    let testMapping = await prisma.nfcTestMapping.findUnique({
       where: { nfcId },
     });
 
-    if (testMapping) {
-      console.log(`[NFC AUTH API] Found test mapping for NFC ID: ${nfcId}`);
-      const privateKey = testMapping.privateKey as Hex;
-      const account = privateKeyToAccount(privateKey);
-      const walletAddress = account.address;
-
-      let user = await prisma.user.findUnique({
-        where: { walletAddress },
-      });
-
-      let isNewUser = false;
-      if (!user) {
-        isNewUser = true;
-        console.log(`[NFC AUTH API] No user for wallet ${walletAddress}. Creating new user from test mapping.`);
-        const encryptedSignerKey = encrypt(privateKey);
-        user = await prisma.user.create({
-          data: {
-            nfcId,
-            walletAddress,
-            encryptedSignerKey,
-          },
-        });
-        console.log(`[NFC AUTH API] New user created from test mapping with ID: ${user.id}`);
-      } else {
-        console.log(`[NFC AUTH API] Found existing user ${user.id} for wallet ${walletAddress}.`);
-      }
+    // If no mapping exists, it's a new user.
+    if (!testMapping) {
+      console.log('[NFC AUTH API] No mapping found. Starting new user signup process...');
+      const { signerPrivateKey, walletAddress } = await createWallet();
       
-      const token = createToken({ id: user.id, walletAddress: user.walletAddress });
-      console.log("[NFC AUTH API] Login successful via test mapping.");
-      return NextResponse.json({ message: 'Login successful via test mapping', token, isNewUser });
+      try {
+        testMapping = await prisma.nfcTestMapping.create({
+          data: { nfcId, privateKey: signerPrivateKey },
+        });
+        console.log(`[NFC AUTH API] New mapping created for NFC ID.`);
+
+        const encryptedSignerKey = encrypt(signerPrivateKey);
+        const user = await prisma.user.create({
+          data: { nfcId, walletAddress, encryptedSignerKey },
+        });
+        console.log(`[NFC AUTH API] New user created with ID: ${user.id}`);
+
+        const token = createToken({ id: user.id, walletAddress: user.walletAddress });
+        return NextResponse.json({
+          message: 'Signup successful, wallet and mapping created',
+          token,
+          isNewUser: true,
+        }, { status: 201 });
+
+      } catch (error: any) {
+        if (error.code === 'P2002' && error.meta?.target?.includes('nfcId')) {
+          console.log("[NFC AUTH API] Race condition detected. Re-fetching mapping.");
+          testMapping = await prisma.nfcTestMapping.findUnique({ where: { nfcId } });
+          if (!testMapping) {
+            throw new Error("Failed to create or find NFC mapping after race condition.");
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // If we are here, a mapping exists. Proceed with login.
+    console.log(`[NFC AUTH API] Found mapping for NFC ID. Proceeding with login.`);
+    const privateKey = testMapping.privateKey as Hex;
+    const account = privateKeyToAccount(privateKey);
+    const walletAddress = account.address;
+
+    let user = await prisma.user.findUnique({
+      where: { walletAddress },
+    });
+
+    if (!user) {
+      // Recovery case: mapping exists, but user doesn't. Recreate user.
+      console.log(`[NFC AUTH API] No user for wallet ${walletAddress}. Recreating user from mapping.`);
+      const encryptedSignerKey = encrypt(privateKey);
+      user = await prisma.user.create({
+        data: { nfcId, walletAddress, encryptedSignerKey },
+      });
+      console.log(`[NFC AUTH API] User recreated with ID: ${user.id}`);
+    } else {
+      console.log(`[NFC AUTH API] Found existing user ${user.id} for wallet ${walletAddress}.`);
     }
     
-    // If no mapping exists, it's a new user. Create wallet, save mapping, then create user.
-    console.log('[NFC AUTH API] No mapping found. Starting new user signup process...');
-    const { signerPrivateKey, walletAddress } = await createWallet();
-    
-    console.log(`[NFC AUTH API] Saving new NFC ID and private key to the mapping table...`);
-    await prisma.nfcTestMapping.create({
-      data: {
-        nfcId,
-        privateKey: signerPrivateKey,
-      },
-    });
-
-    console.log(`[NFC AUTH API] Encrypting private key for user record...`);
-    const encryptedSignerKey = encrypt(signerPrivateKey);
-
-    console.log(`[NFC AUTH API] Creating new user record in database...`);
-    const user = await prisma.user.create({
-      data: {
-        nfcId,
-        walletAddress,
-        encryptedSignerKey,
-      },
-    });
-    console.log(`[NFC AUTH API] New user created with ID: ${user.id}`);
-
     const token = createToken({ id: user.id, walletAddress: user.walletAddress });
-    console.log("[NFC AUTH API] Signup successful, token generated.");
+    console.log("[NFC AUTH API] Login successful.");
+    return NextResponse.json({ message: 'Login successful', token, isNewUser: false });
 
-    return NextResponse.json({
-      message: 'Signup successful, wallet and mapping created',
-      token,
-      walletAddress,
-      isNewUser: true,
-    }, { status: 201 });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('[NFC AUTH API] CRITICAL ERROR:', error);
-    // Handle potential unique constraint violation if two requests come at once
-    if (error.code === 'P2002' && error.meta?.target?.includes('nfcId')) {
-        return NextResponse.json({ error: 'This NFC ID was just registered. Please try again.' }, { status: 409 });
-    }
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
   }
 }
