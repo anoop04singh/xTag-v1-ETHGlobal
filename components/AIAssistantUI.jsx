@@ -7,6 +7,7 @@ import ChatPane from "./ChatPane"
 import ThemeToggle from "./ThemeToggle"
 import { useAuth } from "../context/AuthContext"
 import ExplorePane from "./ExplorePane"
+import AboutPane from "./AboutPane"
 
 export default function AIAssistantUI() {
   const { token } = useAuth();
@@ -103,8 +104,10 @@ export default function AIAssistantUI() {
               isThinking={isThinking}
               onPauseThinking={() => setIsThinking(false)}
             />
-          ) : (
+          ) : view === 'explore' ? (
             <ExplorePane />
+          ) : (
+            <AboutPane />
           )}
         </main>
       </div>

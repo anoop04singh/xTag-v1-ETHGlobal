@@ -5,6 +5,12 @@ import { Badge } from "@/components/ui/badge";
 
 const endpoints = [
   {
+    name: "Wallet Portfolio",
+    command: 'run "wallet-balance" --address <address>',
+    description: "Fetches the ERC20 token portfolio for any specified wallet address on the Polygon network. If you omit the address, it will default to your connected wallet.",
+    highlight: true,
+  },
+  {
     name: "Get Data",
     command: 'run "get-data"',
     description: "Fetches a sample dataset. A great starting point to test the basic payment flow and data retrieval capabilities.",
@@ -24,11 +30,6 @@ const endpoints = [
     command: 'run "documentation"',
     description: "Access technical documentation and guides. Useful for developers looking for information on how to integrate with our services.",
   },
-  {
-    name: "Wallet Portfolio",
-    command: 'run "wallet-balance" --address <address>',
-    description: "Fetches the ERC20 token portfolio for any specified wallet address on the Polygon network. If you omit the address, it will default to your connected wallet.",
-  },
 ];
 
 export default function ExplorePane() {
@@ -41,7 +42,7 @@ export default function ExplorePane() {
         </p>
         <div className="grid gap-6">
           {endpoints.map((endpoint) => (
-            <Card key={endpoint.name}>
+            <Card key={endpoint.name} className={endpoint.highlight ? "border-blue-500/50 dark:border-blue-500/30 ring-2 ring-blue-500/20" : ""}>
               <CardHeader>
                 <CardTitle>{endpoint.name}</CardTitle>
                 <CardDescription>{endpoint.description}</CardDescription>

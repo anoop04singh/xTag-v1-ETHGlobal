@@ -36,6 +36,15 @@ export default function Header({ sidebarCollapsed, setSidebarOpen, view, setView
           >
             Explore
           </button>
+          <button
+            onClick={() => setView('about')}
+            className={cls(
+              "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+              view === 'about' ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            )}
+          >
+            About
+          </button>
         </div>
       </div>
 
