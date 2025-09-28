@@ -108,11 +108,22 @@ function formatApiResponse(command: string, data: any, address?: string): string
             if (data.balances && data.balances.data && Array.isArray(data.balances.data) && data.balances.data.length > 0) {
                 data.balances.data.forEach((token: any) => {
                     const balanceValue = token.quantity / Math.pow(10, token.decimal);
-                    const balance = balanceValue.toFixed(4);
-                    const value = token.value_in_usd ? `$${parseFloat(token.value_in_usd).toFixed(2)}` : 'N/A';
+                    let balance: string;
+                    if (balanceValue > 0 && balanceValue < 0.0001) {
+                        balance = balanceValue.toPrecision(4);
+                    } else {
+                        balance = balanceValue.toFixed(4);
+                    }
+
+                    let valueString = '';
+                    if (token.value_in_usd) {
+                        const value = parseFloat(token.value_in_usd).toFixed(2);
+                        valueString = ` (Value: $${value})`;
+                    }
+                    
                     const name = token.token_name;
                     const symbol = token.token_symbol;
-                    formattedContent += `- **${name} (${symbol})**: ${balance} (Value: ${value})\n`;
+                    formattedContent += `- **${name} (${symbol})**: ${balance}${valueString}\n`;
                 });
             } else {
                 formattedContent += `It looks like this wallet doesn't have any ERC20 tokens, or they couldn't be fetched at this time.`;
