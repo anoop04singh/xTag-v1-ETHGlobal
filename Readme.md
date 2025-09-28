@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/XtagLogoBK.png" alt="xTag Logo" width="96">
+  <img src="public/XtagLogoWh.png" alt="xTag Logo" width="96">
   <h1>xTag Project Documentation</h1>
   <p>An AI-native interface for a 402-enabled world.</p>
 </div>
@@ -68,27 +68,27 @@ The xTag ecosystem is composed of three main parts: the User Interface (this app
 
 ## 4. Core Features Explained
 
-> ### NFC-Based Authentication & Wallet Creation
->
-> xTag uses NFC tags as a physical authenticator. On first tap, the system:
->
-> 1.  Generates a new EOA (Externally Owned Account) wallet.
-> 2.  Encrypts and stores the private key, associating it with the unique NFC ID.
-> 3.  Creates a user record in the database.
-> 4.  Issues a JWT for session management.
->
-> This process provides a seamless, passwordless onboarding experience while automatically provisioning each user with a dedicated wallet for the AI agent to use.
+ ### NFC-Based Authentication & Wallet Creation
 
-> ### The Paid Resource Server
->
-> A separate, external server hosts the paid API endpoints. This server is responsible for:
->
-> -   Protecting resources behind a 402 Payment Required wall.
-> -   Issuing challenges (pricing, recipient address, etc.) to unauthorized clients.
-> -   Verifying on-chain payments.
-> -   Granting access to the resource upon successful payment.
->
-> In this demo, the server is hosted at `https://x402-server-updated.vercel.app`.
+ xTag uses NFC tags as a physical authenticator. On first tap, the system:
+
+ 1.  Generates a new EOA (Externally Owned Account) wallet.
+ 2.  Encrypts and stores the private key, associating it with the unique NFC ID.
+ 3.  Creates a user record in the database.
+ 4.  Issues a JWT for session management.
+
+ This process provides a seamless, passwordless onboarding experience while automatically provisioning each user with a dedicated wallet for the AI agent to use.
+
+ ### The Paid Resource Server
+
+ A separate, external server hosts the paid API endpoints. This server is responsible for:
+
+ -   Protecting resources behind a 402 Payment Required wall.
+ -   Issuing challenges (pricing, recipient address, etc.) to unauthorized clients.
+ -   Verifying on-chain payments.
+ -   Granting access to the resource upon successful payment.
+
+ In this demo, the server is hosted at `https://x402-server-updated.vercel.app`.
 
 ## 5. The x402 Request Flow (Sequence Diagram)
 
@@ -154,3 +154,9 @@ This is the main endpoint for user interaction.
   "content": "✅ **Successfully fetched data from \\"trading-signals\\"**\\n\\n**Latest Trading Signals:**\\n- 🟢 **BTC/USD**: BUY at 68500.50 (Confidence: 0.92)\\n- 🔴 **ETH/USD**: SELL at 3500.75 (Confidence: 0.88)\\n\\n---\\n**Payment Details:**\\n*Transaction Hash:* [0x123...abc](https://amoy.polygonscan.com/tx/0x123...abc)"
 }
 ```
+
+---
+
+<div align="center">
+  <p>Made with ❤️ by 0xanoop, built at ETHGlobal.</p>
+</div>
