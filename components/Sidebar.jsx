@@ -61,7 +61,7 @@ export default function Sidebar({
           <motion.aside
             key="sidebar"
             initial={{ x: -340 }}
-            animate={{ x: open ? 0 : 0 }}
+            animate={{ x: open ? 0 : -340 }}
             exit={{ x: -340 }}
             transition={{ type: "spring", stiffness: 260, damping: 28 }}
             className={cls(
