@@ -166,7 +166,10 @@ async function handlePaidRequest(userId: string, command: string, args: Record<s
             let content = formatApiResponse(command, response.data, targetAddress);
 
             if (paymentResponse) {
-                content += `\n\n---\n**Payment Details:**\n*Transaction Hash:* \`${paymentResponse.transaction}\``;
+                const txHash = paymentResponse.transaction;
+                const explorerUrl = `https://www.oklink.com/amoy/tx/${txHash}`;
+                const shortTxHash = `${txHash.substring(0, 8)}...${txHash.substring(txHash.length - 6)}`;
+                content += `\n\n---\n**Payment Details:**\n*Transaction Hash:* [${shortTxHash}](${explorerUrl})`;
             } else if (command !== 'nft-metadata') {
                 content += `\n\n*(Access was granted without a new payment, you may already have access).*`;
             }
