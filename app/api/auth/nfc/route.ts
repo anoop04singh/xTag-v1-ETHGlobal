@@ -60,34 +60,24 @@ export async function POST(request: Request) {
 
     // If we are here, a mapping exists. Proceed with login.
     console.log(`[NFC AUTH API] Found mapping for NFC ID. Proceeding with login.`);
-    
-    // Find the user by nfcId, which is the unique identifier.
-    let user = await prisma.user.findUnique({
-      where: { nfcId },
-    });
-
     const privateKey = testMapping.privateKey as Hex;
     const account = privateKeyToAccount(privateKey);
     const walletAddress = account.address;
 
+    let user = await prisma.user.findUnique({
+      where: { walletAddress },
+    });
+
     if (!user) {
-      // Recovery case: mapping exists, but user record is missing. Recreate user.
-      console.log(`[NFC AUTH API] Mapping found but no user record. Recreating user from mapping.`);
+      // Recovery case: mapping exists, but user doesn't. Recreate user.
+      console.log(`[NFC AUTH API] No user for wallet ${walletAddress}. Recreating user from mapping.`);
       const encryptedSignerKey = encrypt(privateKey);
       user = await prisma.user.create({
         data: { nfcId, walletAddress, encryptedSignerKey },
       });
       console.log(`[NFC AUTH API] User recreated with ID: ${user.id}`);
     } else {
-      // User exists, ensure wallet address is consistent.
-      console.log(`[NFC AUTH API] Found existing user ${user.id} for nfcId ${nfcId}.`);
-      if (user.walletAddress !== walletAddress) {
-        console.warn(`[NFC AUTH API] Wallet address mismatch for user ${user.id}. Updating to match mapping.`);
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { walletAddress },
-        });
-      }
+      console.log(`[NFC AUTH API] Found existing user ${user.id} for wallet ${walletAddress}.`);
     }
     
     const token = createToken({ id: user.id, walletAddress: user.walletAddress });
