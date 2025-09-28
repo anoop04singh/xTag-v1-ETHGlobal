@@ -19,40 +19,9 @@ export default function Sidebar({
 }) {
   const { user, logout } = useAuth();
 
-  // Collapsed view for desktop
-  if (sidebarCollapsed) {
-    return (
-      <motion.aside
-        initial={{ width: 320 }}
-        animate={{ width: 80 }}
-        transition={{ type: "spring", stiffness: 260, damping: 28 }}
-        className="z-50 hidden h-full shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:flex"
-      >
-        <div className="flex items-center justify-center border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
-          <button
-            onClick={() => setSidebarCollapsed(false)}
-            className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
-            aria-label="Open sidebar"
-            title="Open sidebar"
-          >
-            <PanelLeftOpen className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          {user && <WalletInfo collapsed={true} />}
-        </div>
-        <div className="mt-auto border-t border-zinc-200/60 dark:border-zinc-800">
-          <div className="flex items-center justify-center py-3">
-            <ThemeToggle theme={theme} setTheme={setTheme} collapsed={true} />
-          </div>
-        </div>
-      </motion.aside>
-    );
-  }
-
-  // Expanded view for desktop and mobile drawer
   return (
     <>
+      {/* Mobile Overlay */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -66,19 +35,16 @@ export default function Sidebar({
         )}
       </AnimatePresence>
 
+      {/* Mobile Drawer */}
       <AnimatePresence>
-        {(open || typeof window !== "undefined") && (
+        {open && (
           <motion.aside
-            key="sidebar"
-            initial={{ x: -340 }}
-            animate={{ x: open ? 0 : -340 }}
-            exit={{ x: -340 }}
+            key="mobile-sidebar"
+            initial={{ x: -320 }}
+            animate={{ x: 0 }}
+            exit={{ x: -320 }}
             transition={{ type: "spring", stiffness: 260, damping: 28 }}
-            className={cls(
-              "z-50 flex h-full w-80 shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900",
-              "fixed inset-y-0 left-0 md:static md:translate-x-0",
-              sidebarCollapsed && "md:hidden" // Hide expanded view on desktop when collapsed
-            )}
+            className="fixed inset-y-0 left-0 z-50 flex h-full w-80 shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:hidden"
           >
             <div className="flex items-center gap-2 border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
               <div className="flex items-center gap-2">
@@ -90,28 +56,17 @@ export default function Sidebar({
               </div>
               <div className="ml-auto flex items-center gap-1">
                 <button
-                  onClick={() => setSidebarCollapsed(true)}
-                  className="hidden md:block rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
-                  aria-label="Close sidebar"
-                  title="Close sidebar"
-                >
-                  <PanelLeftClose className="h-5 w-5" />
-                </button>
-
-                <button
                   onClick={onClose}
-                  className="md:hidden rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
+                  className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
                   aria-label="Close sidebar"
                 >
                   <PanelLeftClose className="h-5 w-5" />
                 </button>
               </div>
             </div>
-
             <div className="flex-1 overflow-y-auto">
               {user && <WalletInfo collapsed={false} />}
             </div>
-
             <div className="border-t border-zinc-200/60 dark:border-zinc-800">
               <div className="flex items-center gap-2 px-3 py-3">
                 <button onClick={logout} className="text-xs text-zinc-500 hover:underline dark:text-zinc-400">
@@ -125,6 +80,65 @@ export default function Sidebar({
           </motion.aside>
         )}
       </AnimatePresence>
+
+      {/* Desktop Sidebar */}
+      <motion.aside
+        animate={{ width: sidebarCollapsed ? 80 : 320 }}
+        transition={{ type: "spring", stiffness: 260, damping: 28 }}
+        className="z-50 hidden h-full shrink-0 flex-col overflow-hidden border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:flex"
+      >
+        <div className={cls("flex h-full flex-col", sidebarCollapsed ? "w-20" : "w-80")}>
+          <div className="flex items-center gap-2 border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
+            <AnimatePresence initial={false} mode="wait">
+              <motion.div
+                key={sidebarCollapsed ? "collapsed" : "expanded"}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="flex w-full items-center"
+              >
+                {!sidebarCollapsed && (
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8">
+                        <img src="/XtagLogoBK.png" alt="xTag Logo" className="h-8 w-8 dark:hidden" />
+                        <img src="/XtagLogoWh.png" alt="xTag Logo" className="h-8 w-8 hidden dark:block" />
+                    </div>
+                    <div className="text-sm font-semibold tracking-tight">xTag</div>
+                  </div>
+                )}
+                <div className={cls("ml-auto flex items-center gap-1", sidebarCollapsed && "w-full justify-center")}>
+                  <button
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
+                    aria-label={sidebarCollapsed ? "Open sidebar" : "Close sidebar"}
+                    title={sidebarCollapsed ? "Open sidebar" : "Close sidebar"}
+                  >
+                    {sidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+                  </button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            {user && <WalletInfo collapsed={sidebarCollapsed} />}
+          </div>
+
+          <div className="border-t border-zinc-200/60 dark:border-zinc-800">
+            <div className={cls("flex items-center gap-2 px-3 py-3", sidebarCollapsed && "justify-center")}>
+              {!sidebarCollapsed && (
+                <button onClick={logout} className="text-xs text-zinc-500 hover:underline dark:text-zinc-400">
+                  Log out
+                </button>
+              )}
+              <div className={cls(!sidebarCollapsed && "ml-auto")}>
+                <ThemeToggle theme={theme} setTheme={setTheme} collapsed={sidebarCollapsed} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.aside>
     </>
   )
 }
